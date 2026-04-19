@@ -7,6 +7,9 @@
 import Foundation
 
 class WeatherViewModel: LocationManagerDelegate {
+    var onDataUpdate: ((WeatherUIModel) -> Void)?
+    var onError: ((String) -> Void)?
+    
     private let networkService: NetworkServiceProtocol
     private var locationManager: LocationManagerProtocol
     
@@ -30,18 +33,40 @@ class WeatherViewModel: LocationManagerDelegate {
             do {
                 let weatherData: WeatherData = try await networkService.fetch(url: url)
                 
+                let uiModel = mapToUIModel(weatherData)
+                
+                await MainActor.run {
+                    self.onDataUpdate?(uiModel)
+                }
+                
                 print("Ответ от сервера")
                 print("Город: \(weatherData.name)")
                 print("Температура: \(weatherData.main.temp)°C")
                 print("Описание: \(weatherData.weather.first?.description ?? "нет данных")")
                 
             } catch {
+                await MainActor.run {
+                    self.onError?(error.localizedDescription)
+                }
                 print("Ошибка загрузки погоды: \(error)")
             }
         }
     }
     func didFailWithError(error: Error) {
             print("Ошибка геолокации: \(error.localizedDescription)")
-        }
+    }
+    
+    private func mapToUIModel(_ data: WeatherData) -> WeatherUIModel {
+        let temp = "\(Int(data.main.temp))°"
+        let max = Int(data.main.tempMax)
+        let min = Int(data.main.tempMin)
+        
+        return WeatherUIModel(
+            cityName: data.name,
+            temperature: temp,
+            description: data.weather.first?.description ?? "Нет данных",
+            minMax: "Макс:\(max)°  Мин:\(min)°"
+        )
+    }
     
 }
