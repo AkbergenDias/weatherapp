@@ -12,7 +12,7 @@ class WeatherViewController: UIViewController {
     
     private let viewModel: WeatherViewModel
     private let gradientLayer = GradientManager.getGradient(for: .evening)
-    let headerView = WeatherHeaderView()
+    private let mainView = WeatherMainView()
     
     init(viewModel: WeatherViewModel) {
         self.viewModel = viewModel
@@ -23,11 +23,20 @@ class WeatherViewController: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
+    override func loadView() {
+        self.view = mainView
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupUI()
+        setupBackground()
         setupBindings()
+        mainView.refreshControl.addTarget(self, action: #selector(didPullToRefresh), for: .valueChanged)
         print("WeatherViewController загружен")
+    }
+    
+    private func setupBackground() {
+        view.layer.insertSublayer(gradientLayer, at: 0)
     }
     
     override func viewDidLayoutSubviews() {
@@ -35,21 +44,15 @@ class WeatherViewController: UIViewController {
         gradientLayer.frame = view.bounds
     }
     
-    private func setupUI() {
-        view.layer.insertSublayer(gradientLayer, at: 0)
-        
-        view.addSubview(headerView)
-        
-        headerView.snp.makeConstraints { make in
-            make.top.equalTo(view.safeAreaLayoutGuide).offset(40)
-            make.leading.trailing.equalToSuperview().inset(89)
+    
+    private func setupBindings() {
+        viewModel.onStateChange = { [weak self] state in
+            self?.mainView.updateState(state)
         }
     }
     
-    private func setupBindings() {
-        
-        viewModel.onDataUpdate = {[weak self] uiModel in
-            self?.headerView.configure(city: uiModel.cityName, temp: uiModel.temperature, description: uiModel.description, minMax: uiModel.minMax)
-        }
+    @objc private func didPullToRefresh() {
+        viewModel.refreshWeather()
+        print("Обновление данных.....")
     }
 }

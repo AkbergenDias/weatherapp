@@ -6,9 +6,14 @@
 //
 import Foundation
 
+enum WeatherState {
+    case loading
+    case success(WeatherUIModel)
+    case error(String)
+}
+
 class WeatherViewModel: LocationManagerDelegate {
-    var onDataUpdate: ((WeatherUIModel) -> Void)?
-    var onError: ((String) -> Void)?
+    var onStateChange: ((WeatherState) -> Void)?
     
     private let networkService: NetworkServiceProtocol
     private var locationManager: LocationManagerProtocol
@@ -22,6 +27,7 @@ class WeatherViewModel: LocationManagerDelegate {
     }
     
     func didUpdateLocation(lat: Double, lon: Double) {
+        onStateChange?(.loading)
         print("Координаты получены: \(lat), \(lon)")
         //API оставил для домашки без git ignore
         let apiKey = "6dc2788ca091c6b2364a1891d83f95f4"
@@ -36,7 +42,7 @@ class WeatherViewModel: LocationManagerDelegate {
                 let uiModel = mapToUIModel(weatherData)
                 
                 await MainActor.run {
-                    self.onDataUpdate?(uiModel)
+                    self.onStateChange?(.success(uiModel))
                 }
                 
                 print("Ответ от сервера")
@@ -46,7 +52,7 @@ class WeatherViewModel: LocationManagerDelegate {
                 
             } catch {
                 await MainActor.run {
-                    self.onError?(error.localizedDescription)
+                    self.onStateChange?(.error(error.localizedDescription))
                 }
                 print("Ошибка загрузки погоды: \(error)")
             }
@@ -67,6 +73,10 @@ class WeatherViewModel: LocationManagerDelegate {
             description: data.weather.first?.description ?? "Нет данных",
             minMax: "Макс:\(max)°  Мин:\(min)°"
         )
+    }
+    
+    func refreshWeather(){
+        locationManager.requestLocation()
     }
     
 }

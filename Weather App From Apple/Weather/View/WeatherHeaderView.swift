@@ -28,7 +28,7 @@ class WeatherHeaderView: UIView {
     
     lazy var descriptionLabel: UILabel = {
         let label = UILabel()
-        label.textColor = UIColor(named: "#C9FFFA") //TODO: Fix Black color
+        label.textColor = UIColor(named: "C9FFFA") //TODO: Fix Black color
         label.font = .systemFont(ofSize: 18, weight: .medium)
         label.textAlignment = .center
         return label
