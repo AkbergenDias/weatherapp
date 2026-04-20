@@ -11,7 +11,7 @@ import SnapKit
 class WeatherViewController: UIViewController {
     
     private let viewModel: WeatherViewModel
-    private let gradientLayer = GradientManager.getGradient(for: .evening)
+    private let gradientLayer = GradientManager.getGradient(for: .current())
     private let mainView = WeatherMainView()
     
     init(viewModel: WeatherViewModel) {
