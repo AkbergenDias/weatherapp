@@ -10,6 +10,7 @@ import UIKit
 class WeatherMainView: UIView {
     
     let headerView = WeatherHeaderView()
+    let weatherHourlySectionView = WeatherHourlySectionView()
     let refreshControl = UIRefreshControl()
     
     lazy var scrollView: UIScrollView = {
@@ -43,6 +44,8 @@ class WeatherMainView: UIView {
         refreshControl.tintColor = .white
         
         contentView.addSubview(headerView)
+        contentView.addSubview(weatherHourlySectionView)
+        
         addSubview(activityIndicator)
         activityIndicator.color = .white
 
@@ -58,7 +61,12 @@ class WeatherMainView: UIView {
         headerView.snp.makeConstraints { make in
             make.top.equalToSuperview().offset(50)
             make.leading.trailing.equalToSuperview().inset(20)
-            make.bottom.equalToSuperview().priority(.low)
+        }
+        
+        weatherHourlySectionView.snp.makeConstraints { make in
+            make.top.equalTo(headerView.snp.bottom).offset(76)
+            make.horizontalEdges.equalToSuperview().inset(20)
+            make.bottom.equalToSuperview().inset(20)
         }
 
         activityIndicator.snp.makeConstraints { make in
@@ -75,7 +83,12 @@ class WeatherMainView: UIView {
             activityIndicator.stopAnimating()
             refreshControl.endRefreshing()
             headerView.isHidden = false
+            weatherHourlySectionView.isHidden = false
+            
             headerView.configure(city: model.cityName, temp: model.temperature, description: model.description, minMax: model.minMax)
+            weatherHourlySectionView.configure(with: model.hourlyForecast, description: model.description)
+            
+            
         case .error(let message):
             activityIndicator.stopAnimating()
             refreshControl.endRefreshing()

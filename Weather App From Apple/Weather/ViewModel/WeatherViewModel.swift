@@ -29,26 +29,32 @@ class WeatherViewModel: LocationManagerDelegate {
     func didUpdateLocation(lat: Double, lon: Double) {
         onStateChange?(.loading)
         print("Координаты получены: \(lat), \(lon)")
+        
         //API оставил для домашки без git ignore
         let apiKey = "6dc2788ca091c6b2364a1891d83f95f4"
-        let urlString = "https://api.openweathermap.org/data/2.5/weather?lat=\(lat)&lon=\(lon)&appid=\(apiKey)&units=metric"
         
-        guard let url = URL(string: urlString) else { return }
+        let weatherUrlString = "https://api.openweathermap.org/data/2.5/weather?lat=\(lat)&lon=\(lon)&appid=\(apiKey)&units=metric"
+        let forecastUrlString = "https://api.openweathermap.org/data/2.5/forecast?lat=\(lat)&lon=\(lon)&appid=\(apiKey)&units=metric"
+        
+        guard let weatherUrl = URL(string: weatherUrlString),
+              let forecastUrl = URL(string: forecastUrlString) else { return }
         
         Task {
             do {
-                let weatherData: WeatherData = try await networkService.fetch(url: url)
+                async let fetchWeather: WeatherData = try await networkService.fetch(url: weatherUrl)
+                async let fetchForecast: ForecastData = try await networkService.fetch(url: forecastUrl)
                 
-                let uiModel = mapToUIModel(weatherData)
+                let (weatherData, forecastData) = try await (fetchWeather, fetchForecast)
+                
+                
+                let hourlyModels = mapToHourlyModel(forecastData)
+                let summary = generateDescription(data: weatherData, forecast: forecastData)
+                
+                let uiModel = mapToUIModel(weatherData, hourlyModels: hourlyModels, summary: summary)
                 
                 await MainActor.run {
                     self.onStateChange?(.success(uiModel))
                 }
-                
-                print("Ответ от сервера")
-                print("Город: \(weatherData.name)")
-                print("Температура: \(weatherData.main.temp)°C")
-                print("Описание: \(weatherData.weather.first?.description ?? "нет данных")")
                 
             } catch {
                 await MainActor.run {
@@ -62,7 +68,7 @@ class WeatherViewModel: LocationManagerDelegate {
             print("Ошибка геолокации: \(error.localizedDescription)")
     }
     
-    private func mapToUIModel(_ data: WeatherData) -> WeatherUIModel {
+    private func mapToUIModel(_ data: WeatherData, hourlyModels: [HourlyWeather], summary: String) -> WeatherUIModel {
         let temp = "\(Int(data.main.temp))°"
         let max = Int(data.main.tempMax)
         let min = Int(data.main.tempMin)
@@ -71,7 +77,9 @@ class WeatherViewModel: LocationManagerDelegate {
             cityName: data.name,
             temperature: temp,
             description: data.weather.first?.description ?? "Нет данных",
-            minMax: "Макс:\(max)°  Мин:\(min)°"
+            summary: summary,
+            minMax: "Макс:\(max)°  Мин:\(min)°",
+            hourlyForecast: hourlyModels
         )
     }
     
@@ -79,4 +87,31 @@ class WeatherViewModel: LocationManagerDelegate {
         locationManager.requestLocation()
     }
     
+    private func generateDescription(data: WeatherData, forecast: ForecastData) -> String {
+        
+        let windSpeed = Int(data.wind.speed * 3.6)
+        let gustInfo = data.wind.gust != nil ? "Порывы до \(Int(data.wind.gust! * 3.6)) км/ч. " : ""
+        let willBeSunny = forecast.list.prefix(4).allSatisfy { $0.weather.first?.main == "Clear" }
+        let sunnyInfo = willBeSunny ? "Солнечно до конца дня." : "Ожидается облачность."
+        
+        return "\(gustInfo)\(sunnyInfo), Ветер:\(windSpeed)"
+    }
+    
+    private func mapToHourlyModel(_ forecastData: ForecastData) -> [HourlyWeather] {
+        let first24Hours = forecastData.list.prefix(8)
+        
+        return first24Hours.map { item in
+            
+            let date = Date(timeIntervalSince1970: TimeInterval(item.dt))
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH"
+            let timeString = formatter.string(from: date)
+            
+            return HourlyWeather(
+                time: timeString,
+                icon: WeatherIconManager.getIcon(for: item.weather.first?.icon ?? ""),
+                temp: "\(Int(item.main.temp))°"
+            )
+        }
+    }
 }

@@ -11,5 +11,7 @@ struct WeatherUIModel {
     let cityName: String
     let temperature: String
     let description: String
+    let summary: String
     let minMax: String
+    let hourlyForecast: [HourlyWeather]
 }
