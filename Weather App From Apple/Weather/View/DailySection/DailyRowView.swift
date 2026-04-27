@@ -66,6 +66,7 @@ class DailyRowView: UIView {
         
         dayLabel.snp.makeConstraints { make in
             make.leading.centerY.equalToSuperview()
+            make.width.equalTo(76)
         }
         
         iconImageView.snp.makeConstraints { make in
@@ -77,6 +78,7 @@ class DailyRowView: UIView {
         minTempLabel.snp.makeConstraints { make in
             make.right.equalTo(tempBar.snp.left).offset(-6)
             make.centerY.equalToSuperview()
+            make.width.equalTo(32)
         }
         
         tempBar.snp.makeConstraints { make in
@@ -88,6 +90,7 @@ class DailyRowView: UIView {
         
         maxTempLabel.snp.makeConstraints { make in
             make.right.centerY.equalToSuperview()
+            make.width.equalTo(32)
         }
     
     }

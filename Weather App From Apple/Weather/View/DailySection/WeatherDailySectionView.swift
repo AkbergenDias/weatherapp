@@ -10,13 +10,10 @@ import UIKit
 class WeatherDailySectionView: UIView {
     
     // MARK: - UI Components
-    
-    private let blurView: UIVisualEffectView = {
-        let blur = UIBlurEffect(style: .systemThinMaterialLight)
-        let view = UIVisualEffectView(effect: blur)
-        view.layer.cornerRadius = 12
-        view.clipsToBounds = true
-        return view
+    lazy var iconImage: UIImageView = {
+        let imageView = UIImageView(image: UIImage(systemName: "calendar"))
+        imageView.tintColor = .white.withAlphaComponent(0.5)
+        return imageView
     }()
     
     lazy var titleLabel: UILabel = {
@@ -52,18 +49,23 @@ class WeatherDailySectionView: UIView {
     
     // MARK: - SetupUI
     private func setupUI() {
-        addSubview(blurView)
-        blurView.contentView.addSubview(titleLabel)
-        blurView.contentView.addSubview(separatorView)
-        blurView.contentView.addSubview(verticalStack)
+        backgroundColor = .systemBlue.withAlphaComponent(0.52)
+        layer.cornerRadius = 12
+
+        addSubview(iconImage)
+        addSubview(titleLabel)
+        addSubview(separatorView)
+        addSubview(verticalStack)
         
-        blurView.snp.makeConstraints { make in
-            make.edges.equalToSuperview()
+        iconImage.snp.makeConstraints { make in
+            make.top.equalToSuperview().inset(12)
+            make.left.equalToSuperview().inset(16)
+            make.size.equalTo(20)
         }
         
         titleLabel.snp.makeConstraints { make in
             make.top.equalToSuperview().inset(12)
-            make.horizontalEdges.equalToSuperview().inset(16)
+            make.left.equalTo(iconImage.snp.right)
         }
         
         separatorView.snp.makeConstraints { make in

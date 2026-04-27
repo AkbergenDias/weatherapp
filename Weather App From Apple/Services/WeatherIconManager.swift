@@ -8,13 +8,17 @@ import UIKit
 
 enum WeatherIconManager {
     static func getIcon(for code: String) -> UIImage? {
+        let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .regular)
+        let systemName: String
+        
         switch code {
-        case "01d": return UIImage(named: "sun")
-        case "01n": return UIImage(named: "moon")
-        case "02d", "03d", "04d", "02n", "03n", "04n": return UIImage(named: "cloud")
-        case "09d", "10d", "11d", "09n", "10n", "11n": return UIImage(named: "rain")
-        case "50d", "50n": return UIImage(named: "wind")
-        default: return UIImage(named: "cloud")
+        case "01d": systemName = "sun.max.fill"
+        case "01n": systemName = "moon.stars.fill"
+        case "02d", "02n": systemName = "cloud.sun.fill"
+        case "09d", "10d": systemName = "cloud.rain.fill"
+        default: systemName = "cloud.fill"
         }
+        
+        return UIImage(systemName: systemName, withConfiguration: config)?.withTintColor(.white, renderingMode: .alwaysOriginal)
     }
 }

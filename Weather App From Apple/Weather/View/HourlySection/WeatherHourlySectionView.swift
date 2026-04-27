@@ -53,7 +53,7 @@ class WeatherHourlySectionView: UIView {
     
     // MARK: - SetupUI
     private func setupUI() {
-        backgroundColor = .white.withAlphaComponent(0.52)
+        backgroundColor = .systemBlue.withAlphaComponent(0.52)
         layer.cornerRadius = 12
         
         collectionView.contentInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)

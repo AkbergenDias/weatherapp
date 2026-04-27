@@ -14,6 +14,14 @@ class WeatherMainView: UIView {
     let weatherDailySectionView = WeatherDailySectionView()
     let refreshControl = UIRefreshControl()
     
+    lazy var backgroundImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.image = UIImage(named: "SunnyBackground")
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        return imageView
+    }()
+    
     lazy var scrollView: UIScrollView = {
         let scrollView = UIScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
@@ -38,6 +46,7 @@ class WeatherMainView: UIView {
     }
     
     func setupUI() {
+        addSubview(backgroundImageView)
         addSubview(scrollView)
         scrollView.addSubview(contentView)
         
@@ -50,9 +59,13 @@ class WeatherMainView: UIView {
         
         addSubview(activityIndicator)
         activityIndicator.color = .white
+        
+        backgroundImageView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
 
         scrollView.snp.makeConstraints { make in
-            make.edges.equalToSuperview()
+            make.edges.equalTo(safeAreaLayoutGuide)
         }
 
         contentView.snp.makeConstraints { make in
