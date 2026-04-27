@@ -18,8 +18,8 @@ enum TimeOfDay {
         let hour = calendar.component(.hour, from: Date())
         switch hour {
         case 5...10: return .morning
-        case 11...17: return .day
-        case 18...22: return .evening
+        case 11...16: return .day
+        case 17...20: return .evening
         default: return .night
         }
     }
@@ -39,9 +39,9 @@ struct GradientManager {
         case .day:
             colors = [UIColor.systemBlue.cgColor, UIColor.white.cgColor]
         case .evening:
-            colors = [UIColor.systemOrange.cgColor, UIColor.white.cgColor]
+            colors = [UIColor.systemPurple.cgColor, UIColor.white.cgColor]
         case .night:
-            colors = [UIColor.black.cgColor, UIColor.white.cgColor]
+            colors = [UIColor.systemIndigo.cgColor, UIColor.systemBlue.cgColor]
         }
         
         gradient.colors = colors

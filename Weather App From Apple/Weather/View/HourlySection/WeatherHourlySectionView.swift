@@ -12,7 +12,8 @@ class WeatherHourlySectionView: UIView {
     
     private var hourlyItems: [HourlyWeather] = []
     
-    lazy var infoLabel: UILabel = {
+    // MARK: - UI elements
+    lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 14, weight: .medium)
         label.textColor = .white
@@ -40,6 +41,7 @@ class WeatherHourlySectionView: UIView {
         return collectionView
     }()
     
+    // MARK: - init
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()
@@ -49,24 +51,25 @@ class WeatherHourlySectionView: UIView {
         fatalError()
     }
     
+    // MARK: - SetupUI
     private func setupUI() {
-        backgroundColor = .systemGroupedBackground.withAlphaComponent(0.1)
+        backgroundColor = .white.withAlphaComponent(0.52)
         layer.cornerRadius = 12
         
         collectionView.contentInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
         collectionView.alwaysBounceHorizontal = true
         
-        addSubview(infoLabel)
+        addSubview(titleLabel)
         addSubview(separatorView)
         addSubview(collectionView)
         
-        infoLabel.snp.makeConstraints { make in
+        titleLabel.snp.makeConstraints { make in
             make.top.equalToSuperview().inset(12)
             make.horizontalEdges.equalToSuperview().inset(16)
         }
         
         separatorView.snp.makeConstraints { make in
-            make.top.equalTo(infoLabel.snp.bottom).offset(12)
+            make.top.equalTo(titleLabel.snp.bottom).offset(12)
             make.horizontalEdges.equalToSuperview().inset(16)
             make.height.equalTo(1)
         }
@@ -80,7 +83,7 @@ class WeatherHourlySectionView: UIView {
     }
     
     func configure(with items: [HourlyWeather], description: String) {
-        self.infoLabel.text = description
+        self.titleLabel.text = description
         self.hourlyItems = items
         collectionView.reloadData()
     }
@@ -102,7 +105,7 @@ extension WeatherHourlySectionView: UICollectionViewDataSource {
         
         let item = hourlyItems[indexPath.row]
         
-        cell.configure(time: item.time, iconName: item.icon, temp: item.temp)
+        cell.configure(time: item.time, icon: item.icon, temp: item.temp, iconCode: item.iconCode)
         
         return cell
     }

@@ -12,6 +12,7 @@ class HourlyItemCell: UICollectionViewCell {
     
     static let initializer = "HourlyItemCell"
     
+    //MARK: UI elements
     private let timeLabel: UILabel = {
         let label = UILabel()
         label.textColor = .white
@@ -33,6 +34,7 @@ class HourlyItemCell: UICollectionViewCell {
         return imageView
     }()
     
+    // MARK: - Init
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()
@@ -42,6 +44,7 @@ class HourlyItemCell: UICollectionViewCell {
         fatalError()
     }
     
+    //MARK: SetupUI
     private func setupUI() {
         contentView.addSubview(timeLabel)
         contentView.addSubview(temperatureLabel)
@@ -54,22 +57,28 @@ class HourlyItemCell: UICollectionViewCell {
         }
         
         iconImageView.snp.makeConstraints { make in
-            make.top.equalTo(timeLabel.snp.bottom).offset(8)
+            make.top.equalTo(timeLabel.snp.bottom).offset(12)
             make.centerX.equalToSuperview()
             make.size.equalTo(24)
         }
         
         temperatureLabel.snp.makeConstraints { make in
-            make.top.equalTo(iconImageView.snp.bottom).offset(8)
+            make.top.equalTo(iconImageView.snp.bottom).offset(12)
             make.centerX.equalToSuperview()
             make.bottom.equalToSuperview()
         }
     }
     
-    func configure(time: String, iconName: String, temp: String) {
+    func configure(time: String, icon: UIImage?, temp: String, iconCode: String) {
         timeLabel.text = time
-        iconImageView.image = UIImage(systemName: iconName)
+        iconImageView.image = icon
         temperatureLabel.text = temp
+        
+        if iconCode == "01d" {
+            iconImageView.tintColor = .systemYellow
+        } else {
+            iconImageView.tintColor = .white
+        }
     }
 
 

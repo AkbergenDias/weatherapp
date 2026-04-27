@@ -25,7 +25,8 @@ class NetworkService: NetworkServiceProtocol {
         
         do {
             return try JSONDecoder().decode(T.self, from: data)
-        } catch {
+        } catch let decodingError as DecodingError {
+            print("Decoding error: \(decodingError)")
             throw NetworkError.decodingError
         }
     }

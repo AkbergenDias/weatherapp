@@ -10,7 +10,7 @@ import SnapKit
 
 class WeatherHeaderView: UIView {
 
-
+    // MARK: - UI elements
     lazy var cityLabel: UILabel = {
         let label = UILabel()
         label.textColor = .white

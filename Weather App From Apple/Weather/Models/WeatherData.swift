@@ -7,14 +7,28 @@
 
 import Foundation
 
+// MARK: Current Weather
 struct WeatherData: Codable {
-    let main: Main
+    let main: MainResponse
     let name: String
-    let weather: [Weather]
-    let wind: Wind
+    let weather: [WeatherResponse]
+    let wind: WindResponse
 }
 
-struct Main: Codable {
+// MARK: 5-Day Forecast
+struct ForecastResponse: Codable {
+    let list: [ForecastItem]
+}
+
+struct ForecastItem: Codable {
+    let dt: Int
+    let main: MainResponse
+    let weather: [WeatherResponse]
+    let dt_txt: String? //dailty temp
+}
+
+// MARK: Shared
+struct MainResponse: Codable {
     let temp: Double
     let humidity: Int
     let tempMax: Double
@@ -28,13 +42,12 @@ struct Main: Codable {
     }
 }
 
-struct Weather: Codable {
-    let main: String
+struct WeatherResponse: Codable {
     let description: String
     let icon: String
+    let main: String
 }
 
-struct Wind: Codable {
+struct WindResponse: Codable {
     let speed: Double
-    let gust: Double?
 }

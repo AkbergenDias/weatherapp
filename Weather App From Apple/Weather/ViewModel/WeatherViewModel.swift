@@ -5,6 +5,7 @@
 //  Created by Диас Акберген on 12.04.2026.
 //
 import Foundation
+import UIKit
 
 enum WeatherState {
     case loading
@@ -32,86 +33,99 @@ class WeatherViewModel: LocationManagerDelegate {
         
         //API оставил для домашки без git ignore
         let apiKey = "6dc2788ca091c6b2364a1891d83f95f4"
-        
-        let weatherUrlString = "https://api.openweathermap.org/data/2.5/weather?lat=\(lat)&lon=\(lon)&appid=\(apiKey)&units=metric"
-        let forecastUrlString = "https://api.openweathermap.org/data/2.5/forecast?lat=\(lat)&lon=\(lon)&appid=\(apiKey)&units=metric"
-        
-        guard let weatherUrl = URL(string: weatherUrlString),
-              let forecastUrl = URL(string: forecastUrlString) else { return }
+        let weatherUrl = URL(string: "https://api.openweathermap.org/data/2.5/weather?lat=\(lat)&lon=\(lon)&appid=\(apiKey)&units=metric")!
+        let forecastUrl = URL(string: "https://api.openweathermap.org/data/2.5/forecast?lat=\(lat)&lon=\(lon)&appid=\(apiKey)&units=metric")!
         
         Task {
             do {
-                async let fetchWeather: WeatherData = try await networkService.fetch(url: weatherUrl)
-                async let fetchForecast: ForecastData = try await networkService.fetch(url: forecastUrl)
+                async let weatherFetch: WeatherData = try await networkService.fetch(url: weatherUrl)
+                async let forecastFetch: ForecastResponse = try await networkService.fetch(url: forecastUrl)
                 
-                let (weatherData, forecastData) = try await (fetchWeather, fetchForecast)
+                let (weatherData, forecastData) = try await (weatherFetch, forecastFetch)
                 
+                let hourlyModels = mapToHourly(forecastData)
+                let dailyModels = mapToDaily(forecastData)
                 
-                let hourlyModels = mapToHourlyModel(forecastData)
-                let summary = generateDescription(data: weatherData, forecast: forecastData)
-                
-                let uiModel = mapToUIModel(weatherData, hourlyModels: hourlyModels, summary: summary)
+                let uiModel = WeatherUIModel(
+                    cityName: weatherData.name,
+                    temperature: "\(Int(weatherData.main.temp))°",
+                    description: weatherData.weather.first?.description.capitalized ?? "",
+                    summary: "Ветер: \(Int(weatherData.wind.speed)) км/ч",
+                    minMax: "Макс: \(Int(weatherData.main.tempMax))° Мин: \(Int(weatherData.main.tempMin))°",
+                    hourlyForecast: hourlyModels,
+                    dailyForecast: dailyModels
+                )
                 
                 await MainActor.run {
                     self.onStateChange?(.success(uiModel))
                 }
-                
             } catch {
-                await MainActor.run {
-                    self.onStateChange?(.error(error.localizedDescription))
-                }
-                print("Ошибка загрузки погоды: \(error)")
+                await MainActor.run { self.onStateChange?(.error(error.localizedDescription)) }
             }
         }
     }
-    func didFailWithError(error: Error) {
-            print("Ошибка геолокации: \(error.localizedDescription)")
-    }
-    
-    private func mapToUIModel(_ data: WeatherData, hourlyModels: [HourlyWeather], summary: String) -> WeatherUIModel {
-        let temp = "\(Int(data.main.temp))°"
-        let max = Int(data.main.tempMax)
-        let min = Int(data.main.tempMin)
+        
+    private func mapToUIModel(_ weatherData: WeatherData, hourlyModels: [HourlyWeather], dailyModels: [DailyWeather]) -> WeatherUIModel {
+        
+        let currentTemp = "\(Int(weatherData.main.temp))°"
+        
+        let max = Int(weatherData.main.tempMax)
+        let min = Int(weatherData.main.tempMin)
         
         return WeatherUIModel(
-            cityName: data.name,
-            temperature: temp,
-            description: data.weather.first?.description ?? "Нет данных",
-            summary: summary,
-            minMax: "Макс:\(max)°  Мин:\(min)°",
-            hourlyForecast: hourlyModels
+            cityName: weatherData.name,
+            temperature: currentTemp,
+            description: weatherData.weather.first?.description.capitalized ?? "",
+            summary: "Ветер: \(Int(weatherData.wind.speed)) км/ч",
+            minMax: "Макс: \(max)°  Мин: \(min)°",
+            hourlyForecast: hourlyModels,
+            dailyForecast: dailyModels
         )
+    }
+    private func mapToHourly(_ data: ForecastResponse) -> [HourlyWeather] {
+        return data.list.prefix(8).map { item in
+            let date = Date(timeIntervalSince1970: TimeInterval(item.dt))
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH"
+            
+            let iconCode = item.weather.first?.icon ?? ""
+            return HourlyWeather(
+                time: formatter.string(from: date),
+                icon: WeatherIconManager.getIcon(for: iconCode) ?? UIImage(),
+                temp: "\(Int(item.main.temp))°",
+                iconCode: iconCode
+            )
+        }
+    }
+        
+    private func mapToDaily(_ data: ForecastResponse) -> [DailyWeather] {
+        var dailyItems: [ForecastItem] = []
+            
+        for i in stride(from: 0, to: data.list.count, by: 8) {
+            dailyItems.append(data.list[i])
+        }
+        
+        return dailyItems.prefix(5).map { item in
+            let date = Date(timeIntervalSince1970: TimeInterval(item.dt))
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "ru_RU")
+            formatter.dateFormat = Calendar.current.isDateInToday(date) ? "'Сегодня'" : "EEEE"
+            
+            let iconCode = item.weather.first?.icon ?? ""
+            return DailyWeather(
+                day: formatter.string(from: date).capitalized,
+                icon: WeatherIconManager.getIcon(for: iconCode) ?? UIImage(),
+                minTemp: "\(Int(item.main.tempMin))°",
+                maxTemp: "\(Int(item.main.tempMax))°"
+            )
+        }
+    }
+    
+    func didFailWithError(error: Error) {
+        print("Ошибка геолокации: \(error.localizedDescription)")
     }
     
     func refreshWeather(){
         locationManager.requestLocation()
-    }
-    
-    private func generateDescription(data: WeatherData, forecast: ForecastData) -> String {
-        
-        let windSpeed = Int(data.wind.speed * 3.6)
-        let gustInfo = data.wind.gust != nil ? "Порывы до \(Int(data.wind.gust! * 3.6)) км/ч. " : ""
-        let willBeSunny = forecast.list.prefix(4).allSatisfy { $0.weather.first?.main == "Clear" }
-        let sunnyInfo = willBeSunny ? "Солнечно до конца дня." : "Ожидается облачность."
-        
-        return "\(gustInfo)\(sunnyInfo), Ветер:\(windSpeed)"
-    }
-    
-    private func mapToHourlyModel(_ forecastData: ForecastData) -> [HourlyWeather] {
-        let first24Hours = forecastData.list.prefix(8)
-        
-        return first24Hours.map { item in
-            
-            let date = Date(timeIntervalSince1970: TimeInterval(item.dt))
-            let formatter = DateFormatter()
-            formatter.dateFormat = "HH"
-            let timeString = formatter.string(from: date)
-            
-            return HourlyWeather(
-                time: timeString,
-                icon: WeatherIconManager.getIcon(for: item.weather.first?.icon ?? ""),
-                temp: "\(Int(item.main.temp))°"
-            )
-        }
     }
 }
