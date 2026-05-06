@@ -12,6 +12,8 @@ class WeatherMainView: UIView {
     let headerView = WeatherHeaderView()
     let weatherHourlySectionView = WeatherHourlySectionView()
     let weatherDailySectionView = WeatherDailySectionView()
+    let feelsLikeView = WeatherDetailSquareView()
+    let uvIndexView = WeatherDetailSquareView()
     let refreshControl = UIRefreshControl()
     
     lazy var backgroundImageView: UIImageView = {
@@ -35,6 +37,14 @@ class WeatherMainView: UIView {
     
     lazy var activityIndicator = UIActivityIndicatorView(style: .large)
     
+    private lazy var firstRowStack: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [feelsLikeView, uvIndexView])
+        stack.axis = .horizontal
+        stack.distribution = .fillEqually
+        stack.spacing = 12
+        return stack
+    }()
+    
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -56,6 +66,7 @@ class WeatherMainView: UIView {
         contentView.addSubview(headerView)
         contentView.addSubview(weatherHourlySectionView)
         contentView.addSubview(weatherDailySectionView)
+        contentView.addSubview(firstRowStack)
         
         addSubview(activityIndicator)
         activityIndicator.color = .white
@@ -86,6 +97,11 @@ class WeatherMainView: UIView {
         weatherDailySectionView.snp.makeConstraints { make in
             make.top.equalTo(weatherHourlySectionView.snp.bottom).offset(8)
             make.horizontalEdges.equalToSuperview().inset(20)
+        }
+        
+        firstRowStack.snp.makeConstraints { make in
+            make.top.equalTo(weatherDailySectionView.snp.bottom).offset(12)
+            make.horizontalEdges.equalToSuperview().inset(20)
             make.bottom.equalToSuperview().inset(20)
         }
 
@@ -101,6 +117,7 @@ class WeatherMainView: UIView {
             headerView.isHidden = true
             weatherHourlySectionView.isHidden = true
             weatherDailySectionView.isHidden = true
+            firstRowStack.isHidden = true
             
         case .success(let model):
             activityIndicator.stopAnimating()
@@ -108,6 +125,7 @@ class WeatherMainView: UIView {
             headerView.isHidden = false
             weatherHourlySectionView.isHidden = false
             weatherDailySectionView.isHidden = false
+            firstRowStack.isHidden = false
             
             headerView.configure(city: model.cityName, temp: model.temperature, description: model.description, minMax: model.minMax)
             weatherHourlySectionView.configure(with: model.hourlyForecast, description: model.description)

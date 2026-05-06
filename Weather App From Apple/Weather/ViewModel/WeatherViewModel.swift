@@ -33,15 +33,21 @@ class WeatherViewModel: LocationManagerDelegate {
         
         //API оставил для домашки без git ignore
         let apiKey = "6dc2788ca091c6b2364a1891d83f95f4"
-        let weatherUrl = URL(string: "https://api.openweathermap.org/data/2.5/weather?lat=\(lat)&lon=\(lon)&appid=\(apiKey)&units=metric")!
-        let forecastUrl = URL(string: "https://api.openweathermap.org/data/2.5/forecast?lat=\(lat)&lon=\(lon)&appid=\(apiKey)&units=metric")!
+        guard let weatherUrl = URL(string:"https://api.openweathermap.org/data/2.5/weather?lat=\(lat)&lon=\(lon)&appid=\(apiKey)&units=metric"),
+            let forecastUrl = URL(string: "https://api.openweathermap.org/data/2.5/forecast?lat=\(lat)&lon=\(lon)&appid=\(apiKey)&units=metric"),
+            let uvUrl = URL(string: "https://api.openweathermap.org/data/2.5/uvi?lat=\(lat)&lon=\(lon)&appid=\(apiKey)")
+        else {
+            self.onStateChange?(.error("Ошибка формирования URL"))
+            return
+        }
         
         Task {
             do {
                 async let weatherFetch: WeatherData = try await networkService.fetch(url: weatherUrl)
                 async let forecastFetch: ForecastResponse = try await networkService.fetch(url: forecastUrl)
+                async let uvFetch: UVResponse = try await networkService.fetch(url: uvUrl)
                 
-                let (weatherData, forecastData) = try await (weatherFetch, forecastFetch)
+                let (weatherData, forecastData, uvData) = try await (weatherFetch, forecastFetch, uvFetch)
                 
                 let hourlyModels = mapToHourly(forecastData)
                 let dailyModels = mapToDaily(forecastData)
@@ -53,19 +59,23 @@ class WeatherViewModel: LocationManagerDelegate {
                     summary: "Ветер: \(Int(weatherData.wind.speed)) км/ч",
                     minMax: "Макс: \(Int(weatherData.main.tempMax))° Мин: \(Int(weatherData.main.tempMin))°",
                     hourlyForecast: hourlyModels,
-                    dailyForecast: dailyModels
+                    dailyForecast: dailyModels,
+                    feelsLike: "\(Int(weatherData.main.feelsLike))°",
+                    uvIndex: "\(Int(uvData.value))"
                 )
                 
                 await MainActor.run {
                     self.onStateChange?(.success(uiModel))
                 }
             } catch {
+                print("Full error: \(error)")
+
                 await MainActor.run { self.onStateChange?(.error(error.localizedDescription)) }
             }
         }
     }
         
-    private func mapToUIModel(_ weatherData: WeatherData, hourlyModels: [HourlyWeather], dailyModels: [DailyWeather]) -> WeatherUIModel {
+    private func mapToUIModel(_ weatherData: WeatherData, hourlyModels: [HourlyWeather], dailyModels: [DailyWeather], uvData: UVResponse) -> WeatherUIModel {
         
         let currentTemp = "\(Int(weatherData.main.temp))°"
         
@@ -79,7 +89,9 @@ class WeatherViewModel: LocationManagerDelegate {
             summary: "Ветер: \(Int(weatherData.wind.speed)) км/ч",
             minMax: "Макс: \(max)°  Мин: \(min)°",
             hourlyForecast: hourlyModels,
-            dailyForecast: dailyModels
+            dailyForecast: dailyModels,
+            feelsLike: "\(Int(weatherData.main.feelsLike))°",
+            uvIndex: "\(Int(uvData.value))"
         )
     }
     private func mapToHourly(_ data: ForecastResponse) -> [HourlyWeather] {
@@ -109,7 +121,7 @@ class WeatherViewModel: LocationManagerDelegate {
             let date = Date(timeIntervalSince1970: TimeInterval(item.dt))
             let formatter = DateFormatter()
             formatter.locale = Locale(identifier: "ru_RU")
-            formatter.dateFormat = Calendar.current.isDateInToday(date) ? "'Сегодня'" : "EEEE"
+            formatter.dateFormat = Calendar.current.isDateInToday(date) ? "'Сегодня'" : "EEE"
             
             let iconCode = item.weather.first?.icon ?? ""
             return DailyWeather(

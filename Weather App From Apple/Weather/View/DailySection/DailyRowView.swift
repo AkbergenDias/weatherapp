@@ -64,6 +64,10 @@ class DailyRowView: UIView {
         addSubview(minTempLabel)
         addSubview(maxTempLabel)
         
+        self.snp.makeConstraints { make in
+            make.height.equalTo(48)
+        }
+        
         dayLabel.snp.makeConstraints { make in
             make.leading.centerY.equalToSuperview()
             make.width.equalTo(76)

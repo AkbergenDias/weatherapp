@@ -16,6 +16,8 @@ struct WeatherUIModel {
     let minMax: String
     let hourlyForecast: [HourlyWeather]
     let dailyForecast: [DailyWeather]
+    let feelsLike: String
+    let uvIndex: String
 }
 
 struct HourlyWeather {

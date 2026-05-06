@@ -33,12 +33,14 @@ struct MainResponse: Codable {
     let humidity: Int
     let tempMax: Double
     let tempMin: Double
+    let feelsLike: Double
     
     enum CodingKeys: String, CodingKey {
         case temp
         case humidity
         case tempMin = "temp_min" // Конверт из Snake_case в CamelCase
         case tempMax = "temp_max"
+        case feelsLike = "feels_like"
     }
 }
 
@@ -50,4 +52,8 @@ struct WeatherResponse: Codable {
 
 struct WindResponse: Codable {
     let speed: Double
+}
+
+struct UVResponse: Decodable {
+    let value: Double
 }

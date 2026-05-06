@@ -33,7 +33,7 @@ class WeatherDailySectionView: UIView {
     private lazy var verticalStack: UIStackView = {
         let stack = UIStackView()
         stack.axis = .vertical
-        stack.spacing = 24
+        stack.spacing = 0
         return stack
     }()
     
@@ -51,7 +51,7 @@ class WeatherDailySectionView: UIView {
     private func setupUI() {
         backgroundColor = .systemBlue.withAlphaComponent(0.52)
         layer.cornerRadius = 12
-
+        
         addSubview(iconImage)
         addSubview(titleLabel)
         addSubview(separatorView)
@@ -84,7 +84,7 @@ class WeatherDailySectionView: UIView {
     func configure(with days: [DailyWeather]) {
         verticalStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
         
-        days.forEach { dayData in
+        for (index, dayData) in days.enumerated() {
             let row = DailyRowView()
             row.configure(
                 day: dayData.day,
@@ -93,6 +93,21 @@ class WeatherDailySectionView: UIView {
                 max: dayData.maxTemp
             )
             verticalStack.addArrangedSubview(row)
+            
+            if index < days.count - 1 {
+                let separator = createSeparator()
+                verticalStack.addArrangedSubview(separator)
+                
+                separator.snp.makeConstraints { make in
+                    make.height.equalTo(0.5)
+                }
+            }
         }
+    }
+    
+    private func createSeparator() -> UIView {
+        let view = UIView()
+        view.backgroundColor = .white.withAlphaComponent(0.12)
+        return view
     }
 }
