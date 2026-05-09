@@ -13,6 +13,7 @@ struct WeatherData: Codable {
     let name: String
     let weather: [WeatherResponse]
     let wind: WindResponse
+    let sys: SysResponse?
 }
 
 // MARK: 5-Day Forecast
@@ -34,6 +35,7 @@ struct MainResponse: Codable {
     let tempMax: Double
     let tempMin: Double
     let feelsLike: Double
+    let pressure: Int
     
     enum CodingKeys: String, CodingKey {
         case temp
@@ -41,6 +43,7 @@ struct MainResponse: Codable {
         case tempMin = "temp_min" // Конверт из Snake_case в CamelCase
         case tempMax = "temp_max"
         case feelsLike = "feels_like"
+        case pressure
     }
 }
 
@@ -52,8 +55,15 @@ struct WeatherResponse: Codable {
 
 struct WindResponse: Codable {
     let speed: Double
+    let deg: Int?
+    let gust: Double?
 }
 
 struct UVResponse: Decodable {
     let value: Double
+}
+
+struct SysResponse: Codable {
+    let sunrise: Int
+    let sunset: Int
 }

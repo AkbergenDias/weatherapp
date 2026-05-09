@@ -12,13 +12,18 @@ class WeatherMainView: UIView {
     let headerView = WeatherHeaderView()
     let weatherHourlySectionView = WeatherHourlySectionView()
     let weatherDailySectionView = WeatherDailySectionView()
-    let feelsLikeView = WeatherDetailSquareView()
-    let uvIndexView = WeatherDetailSquareView()
+    let onAvarageView = OnAvarageWidgetView()
+    let feelsLikeView = FeelsLikeWidgetView()
+    let windView = WeatherWindWidgetView()
+    let uvIndexView = UVIndexWidgetView()
+    let sunsetView = SunsetWidgetView()
+    let humidityView = HumidityWidgetView()
+    let pressureView = PressureWidgetView()
     let refreshControl = UIRefreshControl()
     
     lazy var backgroundImageView: UIImageView = {
         let imageView = UIImageView()
-        imageView.image = UIImage(named: "SunnyBackground")
+        imageView.image = UIImage(named: "ClearDayBackground")
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
         return imageView
@@ -38,9 +43,32 @@ class WeatherMainView: UIView {
     lazy var activityIndicator = UIActivityIndicatorView(style: .large)
     
     private lazy var firstRowStack: UIStackView = {
-        let stack = UIStackView(arrangedSubviews: [feelsLikeView, uvIndexView])
+        let stack = UIStackView(arrangedSubviews: [onAvarageView, feelsLikeView])
         stack.axis = .horizontal
         stack.distribution = .fillEqually
+        stack.spacing = 12
+        return stack
+    }()
+    
+    private lazy var secondRowStack: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [uvIndexView, sunsetView])
+        stack.axis = .horizontal
+        stack.distribution = .fillEqually
+        stack.spacing = 12
+        return stack
+    }()
+
+    private lazy var thirdRowStack: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [humidityView, pressureView])
+        stack.axis = .horizontal
+        stack.distribution = .fillEqually
+        stack.spacing = 12
+        return stack
+    }()
+    
+    private lazy var widgetsVerticalStack: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [firstRowStack, windView, secondRowStack, thirdRowStack])
+        stack.axis = .vertical
         stack.spacing = 12
         return stack
     }()
@@ -66,7 +94,7 @@ class WeatherMainView: UIView {
         contentView.addSubview(headerView)
         contentView.addSubview(weatherHourlySectionView)
         contentView.addSubview(weatherDailySectionView)
-        contentView.addSubview(firstRowStack)
+        contentView.addSubview(widgetsVerticalStack)
         
         addSubview(activityIndicator)
         activityIndicator.color = .white
@@ -99,7 +127,7 @@ class WeatherMainView: UIView {
             make.horizontalEdges.equalToSuperview().inset(20)
         }
         
-        firstRowStack.snp.makeConstraints { make in
+        widgetsVerticalStack.snp.makeConstraints { make in
             make.top.equalTo(weatherDailySectionView.snp.bottom).offset(12)
             make.horizontalEdges.equalToSuperview().inset(20)
             make.bottom.equalToSuperview().inset(20)
@@ -117,20 +145,77 @@ class WeatherMainView: UIView {
             headerView.isHidden = true
             weatherHourlySectionView.isHidden = true
             weatherDailySectionView.isHidden = true
-            firstRowStack.isHidden = true
-            
+            widgetsVerticalStack.isHidden = true
+            backgroundImageView.isHidden = true
+
         case .success(let model):
             activityIndicator.stopAnimating()
             refreshControl.endRefreshing()
             headerView.isHidden = false
             weatherHourlySectionView.isHidden = false
             weatherDailySectionView.isHidden = false
-            firstRowStack.isHidden = false
+            widgetsVerticalStack.isHidden = false
+            backgroundImageView.isHidden = false
             
-            headerView.configure(city: model.cityName, temp: model.temperature, description: model.description, minMax: model.minMax)
-            weatherHourlySectionView.configure(with: model.hourlyForecast, description: model.description)
-            weatherDailySectionView.configure(with: model.dailyForecast)
+            backgroundImageView.image = UIImage(named: model.backgroundImageName)
             
+            headerView.configure(
+                city: model.cityName,
+                temp: model.temperature,
+                description: model.description,
+                minMax: model.minMax
+            )
+            
+            weatherHourlySectionView.configure(
+                with: model.hourlyForecast,
+                description: model.description
+            )
+            
+            weatherDailySectionView.configure(
+                with: model.dailyForecast
+            )
+            
+            onAvarageView.configure(
+                diff: model.averageDiff,
+                desc: model.averageDesc,
+                todayMax: model.todayMax,
+                avgMax: model.averageMax
+            )
+            
+            feelsLikeView.configure(
+                temp: model.feelsLike,
+                desc: "По ощущениям примерно так же, как фактическая температура."
+            )
+            
+            windView.configure(
+                speed: model.windSpeed,
+                gusts: model.windGusts,
+                direction: model.windDirection
+            )
+            
+            uvIndexView.configure(
+                value: model.uvValue,
+                level: model.uvLevel,
+                desc: model.uvDesc,
+                progress: model.uvProgress
+            )
+            
+            sunsetView.configure(
+                isSunset: model.isSunsetMain,
+                mainTime: model.mainSunTime,
+                subText: model.subSunTimeText
+            )
+            
+            humidityView.configure(
+                humidity: model.humidityValue,
+                dewPointText: model.dewPointText
+            )
+            
+            pressureView.configure(
+                pressure: model.pressureValue,
+                subText: model.pressureSubText
+            )
+
             
         case .error(let message):
             activityIndicator.stopAnimating()

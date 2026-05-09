@@ -18,6 +18,32 @@ struct WeatherUIModel {
     let dailyForecast: [DailyWeather]
     let feelsLike: String
     let uvIndex: String
+    
+    let averageDiff: String
+    let averageDesc: String
+    let todayMax: String
+    let averageMax: String
+    
+    let windSpeed: String
+    let windGusts: String
+    let windDirection: String
+    
+    let uvValue: String
+    let uvLevel: String
+    let uvDesc: String
+    let uvProgress: CGFloat
+    
+    let isSunsetMain: Bool
+    let mainSunTime: String
+    let subSunTimeText: String
+    
+    let humidityValue: String
+    let dewPointText: String
+    
+    let pressureValue: String
+    let pressureSubText: String
+    
+    let backgroundImageName: String
 }
 
 struct HourlyWeather {

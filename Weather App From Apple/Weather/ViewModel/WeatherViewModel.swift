@@ -48,21 +48,8 @@ class WeatherViewModel: LocationManagerDelegate {
                 async let uvFetch: UVResponse = try await networkService.fetch(url: uvUrl)
                 
                 let (weatherData, forecastData, uvData) = try await (weatherFetch, forecastFetch, uvFetch)
-                
-                let hourlyModels = mapToHourly(forecastData)
-                let dailyModels = mapToDaily(forecastData)
-                
-                let uiModel = WeatherUIModel(
-                    cityName: weatherData.name,
-                    temperature: "\(Int(weatherData.main.temp))°",
-                    description: weatherData.weather.first?.description.capitalized ?? "",
-                    summary: "Ветер: \(Int(weatherData.wind.speed)) км/ч",
-                    minMax: "Макс: \(Int(weatherData.main.tempMax))° Мин: \(Int(weatherData.main.tempMin))°",
-                    hourlyForecast: hourlyModels,
-                    dailyForecast: dailyModels,
-                    feelsLike: "\(Int(weatherData.main.feelsLike))°",
-                    uvIndex: "\(Int(uvData.value))"
-                )
+                            
+                let uiModel = mapToUIModel(weatherData, forecastData: forecastData, uvData: uvData)
                 
                 await MainActor.run {
                     self.onStateChange?(.success(uiModel))
@@ -75,23 +62,136 @@ class WeatherViewModel: LocationManagerDelegate {
         }
     }
         
-    private func mapToUIModel(_ weatherData: WeatherData, hourlyModels: [HourlyWeather], dailyModels: [DailyWeather], uvData: UVResponse) -> WeatherUIModel {
+    private func mapToUIModel(_ weatherData: WeatherData, forecastData: ForecastResponse, uvData: UVResponse) -> WeatherUIModel {
         
-        let currentTemp = "\(Int(weatherData.main.temp))°"
+        // Hourly and Daily
+        let hourlyModels = mapToHourly(forecastData)
+        let dailyModels = mapToDaily(forecastData)
         
-        let max = Int(weatherData.main.tempMax)
-        let min = Int(weatherData.main.tempMin)
+        // Avarage
+        let dailyMaxTemps = forecastData.list.map { $0.main.tempMax }
+        let calculatedAverageMax = dailyMaxTemps.reduce(0, +) / Double(dailyMaxTemps.count)
         
+        let todayMaxTemp = weatherData.main.tempMax
+        
+        // Difference
+        let difference = Int(todayMaxTemp - calculatedAverageMax)
+        let diffString = difference > 0 ? "+\(difference)°" : "\(difference)°"
+        let descString = difference >= 0 ? "выше среднего максимума" : "ниже среднего максимума"
+        
+        // Km/h from m/s
+        let speedKmH = Int(weatherData.wind.speed * 3.6)
+        let windSpeedStr = "\(speedKmH) км/ч"
+
+        // Gusts
+        let gustKmH = weatherData.wind.gust.map { Int($0 * 3.6) }
+        let windGustStr = gustKmH != nil ? "\(gustKmH!) км/ч" : "-- км/ч"
+
+        // Wind direction
+        let windDirStr = weatherData.wind.deg != nil ? getWindDirection(degrees: weatherData.wind.deg!) : "--"
+        
+        // UV
+        let uvVal = uvData.value
+        let uvLevelStr: String
+        let uvDescStr: String
+        if uvVal <= 2 {
+            uvLevelStr = "Низкий"
+            uvDescStr = "Останется низким до конца дня."
+        } else if uvVal <= 5 {
+            uvLevelStr = "Умеренный"
+            uvDescStr = "Используйте SPF защиту в середине дня."
+        } else if uvVal <= 7 {
+            uvLevelStr = "Высокий"
+            uvDescStr = "Постарайтесь меньше находиться на солнце."
+        } else {
+            uvLevelStr = "Очень высокий"
+            uvDescStr = "Обязательно используйте SPF защиту."
+        }
+        let uvProgressVal = CGFloat(uvVal / 11.0)
+        
+        // Sunset
+        var isSunsetMain = true
+        var mainSunTimeStr = "-:-"
+        var subSunTimeStr = "Восход в -:-"
+        
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        
+        if let sys = weatherData.sys {
+            let currentTimestamp = Int(Date().timeIntervalSince1970)
+            let sunriseDate = Date(timeIntervalSince1970: TimeInterval(sys.sunrise))
+            let sunsetDate = Date(timeIntervalSince1970: TimeInterval(sys.sunset))
+            
+            let sunriseStr = formatter.string(from: sunriseDate)
+            let sunsetStr = formatter.string(from: sunsetDate)
+            
+            if currentTimestamp < sys.sunset {
+                isSunsetMain = true
+                mainSunTimeStr = sunsetStr
+                subSunTimeStr = "Восход в \(sunriseStr)."
+            } else {
+                isSunsetMain = false
+                mainSunTimeStr = sunriseStr
+                subSunTimeStr = "Закат в \(sunsetStr)."
+            }
+        }
+        
+        //Humiditty
+        let humidityVal = weatherData.main.humidity
+        let tempVal = weatherData.main.temp
+        let dewPointVal = Int(tempVal - ((100.0 - Double(humidityVal)) / 5.0))
+        let dewPointStr = "Точка росы сейчас: \(dewPointVal)°."
+        
+        let pressureVal = weatherData.main.pressure
+        let numberFormatter = NumberFormatter()
+        numberFormatter.numberStyle = .decimal
+        numberFormatter.groupingSeparator = " "
+        let formattedPressure = numberFormatter.string(from: NSNumber(value: pressureVal)) ?? "\(pressureVal)"
+        
+        // Background
+        let condition = weatherData.weather.first?.main ?? "Clear"
+        let bgImageName = WeatherBackgroundManager.getBackgroundImageName(
+            for: Date(),
+            conditionCode: condition
+        )
+        
+        // UIModel
         return WeatherUIModel(
             cityName: weatherData.name,
-            temperature: currentTemp,
+            temperature: "\(Int(weatherData.main.temp))°",
             description: weatherData.weather.first?.description.capitalized ?? "",
             summary: "Ветер: \(Int(weatherData.wind.speed)) км/ч",
-            minMax: "Макс: \(max)°  Мин: \(min)°",
+            minMax: "Макс: \(Int(weatherData.main.tempMax))°  Мин: \(Int(weatherData.main.tempMin))°",
             hourlyForecast: hourlyModels,
             dailyForecast: dailyModels,
             feelsLike: "\(Int(weatherData.main.feelsLike))°",
-            uvIndex: "\(Int(uvData.value))"
+            uvIndex: "\(Int(uvData.value))",
+            
+            averageDiff: diffString,
+            averageDesc: descString,
+            todayMax: "\(Int(todayMaxTemp))°",
+            averageMax: "\(Int(calculatedAverageMax))°",
+            
+            windSpeed: windSpeedStr,
+            windGusts: windGustStr,
+            windDirection: windDirStr,
+            
+            uvValue: "\(Int(uvVal))",
+            uvLevel: uvLevelStr,
+            uvDesc: uvDescStr,
+            uvProgress: uvProgressVal,
+            
+            isSunsetMain: isSunsetMain,
+            mainSunTime: mainSunTimeStr,
+            subSunTimeText: subSunTimeStr,
+            
+            humidityValue: "\(humidityVal) %",
+            dewPointText: dewPointStr,
+            
+            pressureValue: formattedPressure,
+            pressureSubText: "↓ гПА",
+            
+            backgroundImageName: bgImageName
         )
     }
     private func mapToHourly(_ data: ForecastResponse) -> [HourlyWeather] {
@@ -131,6 +231,12 @@ class WeatherViewModel: LocationManagerDelegate {
                 maxTemp: "\(Int(item.main.tempMax))°"
             )
         }
+    }
+    
+    private func getWindDirection(degrees: Int) -> String {
+        let directions = ["С", "СВ", "В", "ЮВ", "Ю", "ЮЗ", "З", "СЗ", "С"]
+        let index = Int(round(Double(degrees).truncatingRemainder(dividingBy: 360) / 45.0))
+        return "\(degrees)° \(directions[index])"
     }
     
     func didFailWithError(error: Error) {
