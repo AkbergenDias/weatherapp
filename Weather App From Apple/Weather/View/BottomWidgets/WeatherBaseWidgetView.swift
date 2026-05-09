@@ -12,9 +12,8 @@ class WeatherBaseWidgetView: UIView {
     
     private let blurView: UIVisualEffectView = {
         let view = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
-        view.layer.cornerRadius = 16
+        view.layer.cornerRadius = 12
         view.clipsToBounds = true
-        view.contentView.backgroundColor = UIColor.white.withAlphaComponent(0.08)
         return view
     }()
     

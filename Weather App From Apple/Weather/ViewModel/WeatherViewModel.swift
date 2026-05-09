@@ -217,18 +217,30 @@ class WeatherViewModel: LocationManagerDelegate {
             dailyItems.append(data.list[i])
         }
         
-        return dailyItems.prefix(5).map { item in
+        let items = dailyItems.prefix(5)
+        
+        let allMinTemps = items.map { $0.main.tempMin }
+        let allMaxTemps = items.map { $0.main.tempMax }
+        
+        let weekMin = Int(allMinTemps.min() ?? 0)
+        let weekMax = Int(allMaxTemps.max() ?? 0)
+        
+        return items.map { item in
             let date = Date(timeIntervalSince1970: TimeInterval(item.dt))
             let formatter = DateFormatter()
             formatter.locale = Locale(identifier: "ru_RU")
             formatter.dateFormat = Calendar.current.isDateInToday(date) ? "'Сегодня'" : "EEE"
             
+            let isToday = Calendar.current.isDateInToday(date)
             let iconCode = item.weather.first?.icon ?? ""
             return DailyWeather(
                 day: formatter.string(from: date).capitalized,
                 icon: WeatherIconManager.getIcon(for: iconCode) ?? UIImage(),
-                minTemp: "\(Int(item.main.tempMin))°",
-                maxTemp: "\(Int(item.main.tempMax))°"
+                minTemp: (Int(item.main.tempMin)),
+                maxTemp: (Int(item.main.tempMax)),
+                minTempWeek: weekMin,
+                maxTempWeek: weekMax,
+                currentTemp: isToday ? Int(item.main.temp) : nil
             )
         }
     }

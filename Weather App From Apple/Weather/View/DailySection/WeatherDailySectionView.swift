@@ -10,6 +10,14 @@ import UIKit
 class WeatherDailySectionView: UIView {
     
     // MARK: - UI Components
+    
+    private let blurView: UIVisualEffectView = {
+        let view = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
+        view.layer.cornerRadius = 12
+        view.clipsToBounds = true
+        return view
+    }()
+    
     lazy var iconImage: UIImageView = {
         let imageView = UIImageView(image: UIImage(systemName: "calendar"))
         imageView.tintColor = .white.withAlphaComponent(0.5)
@@ -40,6 +48,7 @@ class WeatherDailySectionView: UIView {
     // MARK: - Init
     override init(frame: CGRect) {
         super.init(frame: frame)
+        self.backgroundColor = .clear
         setupUI()
     }
     
@@ -49,13 +58,16 @@ class WeatherDailySectionView: UIView {
     
     // MARK: - SetupUI
     private func setupUI() {
-        backgroundColor = .systemBlue.withAlphaComponent(0.52)
-        layer.cornerRadius = 12
         
-        addSubview(iconImage)
-        addSubview(titleLabel)
-        addSubview(separatorView)
-        addSubview(verticalStack)
+        addSubview(blurView)
+        blurView.snp.makeConstraints { $0.edges.equalToSuperview() }
+        
+        let content = blurView.contentView
+        
+        content.addSubview(iconImage)
+        content.addSubview(titleLabel)
+        content.addSubview(separatorView)
+        content.addSubview(verticalStack)
         
         iconImage.snp.makeConstraints { make in
             make.top.equalToSuperview().inset(12)
@@ -64,20 +76,20 @@ class WeatherDailySectionView: UIView {
         }
         
         titleLabel.snp.makeConstraints { make in
-            make.top.equalToSuperview().inset(12)
-            make.left.equalTo(iconImage.snp.right)
+            make.centerY.equalTo(iconImage)
+            make.leading.equalTo(iconImage.snp.trailing).offset(6)
         }
         
         separatorView.snp.makeConstraints { make in
-            make.top.equalTo(titleLabel.snp.bottom).offset(12)
+            make.top.equalTo(iconImage.snp.bottom).offset(10)
             make.horizontalEdges.equalToSuperview().inset(16)
             make.height.equalTo(1)
         }
         
         verticalStack.snp.makeConstraints { make in
-            make.top.equalTo(separatorView.snp.bottom).offset(16)
+            make.top.equalTo(separatorView.snp.bottom).offset(4)
             make.horizontalEdges.equalToSuperview().inset(16)
-            make.bottom.equalToSuperview().inset(16)
+            make.bottom.equalToSuperview().inset(12)
         }
     }
     
@@ -86,12 +98,7 @@ class WeatherDailySectionView: UIView {
         
         for (index, dayData) in days.enumerated() {
             let row = DailyRowView()
-            row.configure(
-                day: dayData.day,
-                icon: dayData.icon,
-                min: dayData.minTemp,
-                max: dayData.maxTemp
-            )
+            row.configure(with: dayData)
             verticalStack.addArrangedSubview(row)
             
             if index < days.count - 1 {
@@ -99,7 +106,7 @@ class WeatherDailySectionView: UIView {
                 verticalStack.addArrangedSubview(separator)
                 
                 separator.snp.makeConstraints { make in
-                    make.height.equalTo(0.5)
+                    make.height.equalTo(1)
                 }
             }
         }

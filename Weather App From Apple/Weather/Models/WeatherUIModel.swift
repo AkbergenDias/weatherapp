@@ -56,6 +56,9 @@ struct HourlyWeather {
 struct DailyWeather {
     let day: String
     let icon: UIImage
-    let minTemp: String
-    let maxTemp: String
+    let minTemp: Int
+    let maxTemp: Int
+    let minTempWeek: Int
+    let maxTempWeek: Int
+    let currentTemp: Int?
 }

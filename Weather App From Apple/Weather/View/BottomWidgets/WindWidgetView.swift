@@ -12,8 +12,8 @@ class WeatherWindWidgetView: UIView {
     
     // MARK: - UI Elements
     private let blurView: UIVisualEffectView = {
-        let view = UIVisualEffectView(effect: UIBlurEffect(style: .systemThinMaterialDark))
-        view.layer.cornerRadius = 16
+        let view = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
+        view.layer.cornerRadius = 12
         view.clipsToBounds = true
         return view
     }()

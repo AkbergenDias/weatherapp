@@ -13,6 +13,14 @@ class WeatherHourlySectionView: UIView {
     private var hourlyItems: [HourlyWeather] = []
     
     // MARK: - UI elements
+    
+    private let blurView: UIVisualEffectView = {
+        let view = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
+        view.layer.cornerRadius = 12
+        view.clipsToBounds = true
+        return view
+    }()
+    
     lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 14, weight: .medium)
@@ -44,6 +52,7 @@ class WeatherHourlySectionView: UIView {
     // MARK: - init
     override init(frame: CGRect) {
         super.init(frame: frame)
+        backgroundColor = .clear
         setupUI()
     }
     
@@ -53,15 +62,17 @@ class WeatherHourlySectionView: UIView {
     
     // MARK: - SetupUI
     private func setupUI() {
-        backgroundColor = .systemBlue.withAlphaComponent(0.52)
-        layer.cornerRadius = 12
+        addSubview(blurView)
+        blurView.snp.makeConstraints { $0.edges.equalToSuperview() }
         
+        let content = blurView.contentView
+
         collectionView.contentInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
         collectionView.alwaysBounceHorizontal = true
         
-        addSubview(titleLabel)
-        addSubview(separatorView)
-        addSubview(collectionView)
+        content.addSubview(titleLabel)
+        content.addSubview(separatorView)
+        content.addSubview(collectionView)
         
         titleLabel.snp.makeConstraints { make in
             make.top.equalToSuperview().inset(12)
@@ -79,6 +90,7 @@ class WeatherHourlySectionView: UIView {
             make.bottom.equalToSuperview().inset(12)
             make.horizontalEdges.equalToSuperview()
             make.height.equalTo(90)
+            make.bottom.equalToSuperview().inset(12)
         }
     }
     
