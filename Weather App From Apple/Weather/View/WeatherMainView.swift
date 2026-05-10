@@ -104,7 +104,7 @@ class WeatherMainView: UIView {
         }
 
         scrollView.snp.makeConstraints { make in
-            make.edges.equalTo(safeAreaLayoutGuide)
+            make.edges.equalToSuperview()
         }
 
         contentView.snp.makeConstraints { make in

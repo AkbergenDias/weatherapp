@@ -18,13 +18,52 @@ class WeatherViewModel: LocationManagerDelegate {
     
     private let networkService: NetworkServiceProtocol
     private var locationManager: LocationManagerProtocol
+    private let persistenceService: PersistenceServiceProtocol
     
-    init(networkService: NetworkServiceProtocol, locationManager: LocationManagerProtocol) {
+    private(set) var savedCities: [String] = []
+    private var currentCityIndex: Int = 0
+    
+    init(networkService: NetworkServiceProtocol, locationManager: LocationManagerProtocol, persistenceService: PersistenceServiceProtocol = DIContainer.shared.persistenceService) {
         self.networkService = networkService
         self.locationManager = locationManager
-        self.locationManager.delegate = self
-        
+        self.persistenceService = persistenceService
+        loadCities()
         locationManager.requestLocation()
+        self.locationManager.delegate = self
+    }
+    
+    func loadCities() {
+        let saved = persistenceService.getSavedCities()
+        
+        var list = ["Текущее место"]
+        list.append(contentsOf: saved)
+        self.savedCities = list
+    }
+    
+    func switchToNextCity() {
+        guard !savedCities.isEmpty else { return }
+        currentCityIndex = (currentCityIndex + 1) % savedCities.count
+        fetchWeatherForActiveIndex()
+    }
+    
+    func switchToPreviousCity() {
+        guard !savedCities.isEmpty else { return }
+        currentCityIndex = (currentCityIndex - 1 + savedCities.count) % savedCities.count
+        fetchWeatherForActiveIndex()
+    }
+    
+    private func fetchWeatherForActiveIndex() {
+        if currentCityIndex == 0 {
+            print("Запрашиваем погоду по текущей геолокации...")
+            locationManager.requestLocation()
+        } else {
+            let cityName = savedCities[currentCityIndex]
+            print("Запрашиваем погоду по названию города: \(cityName)")
+        }
+    }
+    
+    func refreshWeather() {
+        fetchWeatherForActiveIndex()
     }
     
     func didUpdateLocation(lat: Double, lon: Double) {
@@ -253,9 +292,5 @@ class WeatherViewModel: LocationManagerDelegate {
     
     func didFailWithError(error: Error) {
         print("Ошибка геолокации: \(error.localizedDescription)")
-    }
-    
-    func refreshWeather(){
-        locationManager.requestLocation()
     }
 }

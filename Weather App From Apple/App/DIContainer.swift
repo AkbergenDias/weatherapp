@@ -16,4 +16,5 @@ final class DIContainer {
     
     private(set) lazy var networkService: NetworkServiceProtocol = NetworkService()
     private(set) lazy var locationManager: LocationManagerProtocol = LocationManager()
+    private(set) lazy var persistenceService: PersistenceServiceProtocol = PersistenceService()
 }

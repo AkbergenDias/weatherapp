@@ -12,7 +12,7 @@ class OnAvarageWidgetView: WeatherBaseWidgetView {
     
     private let tempLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 32, weight: .semibold)
+        label.font = .systemFont(ofSize: 32, weight: .medium)
         label.textColor = .white
         return label
     }()
