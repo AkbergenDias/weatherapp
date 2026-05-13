@@ -7,10 +7,19 @@
 
 import UIKit
 import SnapKit
+import MapKit
+
+protocol SavedCitiesViewControllerDelegate: AnyObject {
+    func didSelectCity(at index: Int)
+}
 
 class SavedCitiesViewController: UIViewController {
     
-    var savedCities: [String] = ["Алматы", "Астана", "Шымкент"]
+    weak var delegate: SavedCitiesViewControllerDelegate?
+    
+    let viewModel = SavedCitiesViewModel()
+    private var searchResults: [MKLocalSearchCompletion] = []
+    private var isSearching = false
     
     // MARK: - UI Components
     private let titleLabel: UILabel = {
@@ -21,13 +30,15 @@ class SavedCitiesViewController: UIViewController {
         return label
     }()
     
-    private let searchBar: UISearchBar = {
-        let bar = UISearchBar()
-        bar.placeholder = "Поиск города или аэропорта"
-        bar.searchBarStyle = .minimal
-        bar.searchTextField.textColor = .white
-        bar.searchTextField.backgroundColor = UIColor.white.withAlphaComponent(0.08)
-        return bar
+    private let searchField = SearchTextField()
+    
+    private let statusLabel: UILabel = {
+        let label = UILabel()
+        label.textColor = .white.withAlphaComponent(0.6)
+        label.font = .systemFont(ofSize: 16)
+        label.textAlignment = .center
+        label.isHidden = true
+        return label
     }()
     
     private lazy var tableView: UITableView = {
@@ -35,172 +46,196 @@ class SavedCitiesViewController: UIViewController {
         table.backgroundColor = .clear
         table.separatorStyle = .none
         table.register(CityWeatherCell.self, forCellReuseIdentifier: "CityWeatherCell")
+        table.register(UITableViewCell.self, forCellReuseIdentifier: "SuggestionCell")
         table.delegate = self
         table.dataSource = self
         return table
     }()
     
+    // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor(red: 0.1, green: 0.18, blue: 0.28, alpha: 1.0)
+        
         setupUI()
+        setupBindings()
+        
+        searchField.addTarget(self, action: #selector(searchTextChanged), for: .editingChanged)
+        searchField.onClearTapped = { [weak self] in
+            self?.searchTextChanged()
+        }
     }
     
     private func setupUI() {
         view.addSubview(titleLabel)
-        view.addSubview(searchBar)
+        view.addSubview(searchField)
         view.addSubview(tableView)
+        view.addSubview(statusLabel)
         
         titleLabel.snp.makeConstraints { make in
             make.top.equalToSuperview().inset(24)
             make.horizontalEdges.equalToSuperview().inset(16)
         }
         
-        searchBar.snp.makeConstraints { make in
-            make.top.equalTo(titleLabel.snp.bottom).offset(8)
-            make.horizontalEdges.equalToSuperview().inset(8)
+        searchField.snp.makeConstraints { make in
+            make.top.equalTo(titleLabel.snp.bottom).offset(12)
+            make.horizontalEdges.equalToSuperview().inset(16)
+            make.height.equalTo(40)
         }
         
         tableView.snp.makeConstraints { make in
-            make.top.equalTo(searchBar.snp.bottom).offset(12)
+            make.top.equalTo(searchField.snp.bottom).offset(16)
             make.horizontalEdges.bottom.equalToSuperview()
+        }
+        
+        statusLabel.snp.makeConstraints { make in
+            make.center.equalToSuperview()
+            make.horizontalEdges.equalToSuperview().inset(32)
+        }
+    }
+    
+    @objc private func searchTextChanged() {
+        viewModel.processSearchInput(searchField.text ?? "")
+    }
+    
+    private func openSavedCities() {
+        let savedCitiesVC = SavedCitiesViewController()
+        savedCitiesVC.delegate = self // Подписка на делегат
+        savedCitiesVC.modalPresentationStyle = .pageSheet
+        
+        if let sheet = savedCitiesVC.sheetPresentationController {
+            sheet.detents = [.medium(), .large()]
+            sheet.prefersGrabberVisible = true
+        }
+        present(savedCitiesVC, animated: true)
+    }
+}
+
+// MARK: - Биндинги состояний
+extension SavedCitiesViewController {
+    private func setupBindings() {
+        viewModel.onSavedCitiesUpdate = { [weak self] in
+            DispatchQueue.main.async {
+                if !(self?.isSearching ?? false) {
+                    self?.tableView.reloadData()
+                }
+            }
+        }
+        
+        viewModel.onSearchStateChange = { [weak self] state in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                switch state {
+                case .empty:
+                    self.isSearching = false
+                    self.statusLabel.isHidden = true
+                    self.tableView.isHidden = false
+                    self.tableView.reloadData()
+                    
+                case .searching:
+                    self.isSearching = true
+                    self.statusLabel.isHidden = false
+                    self.statusLabel.text = "Идёт поиск..."
+                    self.tableView.isHidden = true
+                    
+                case .results(let completions):
+                    self.isSearching = true
+                    self.statusLabel.isHidden = true
+                    self.tableView.isHidden = false
+                    self.searchResults = completions
+                    self.tableView.reloadData()
+                    
+                case .noResults:
+                    self.isSearching = true
+                    self.statusLabel.isHidden = false
+                    self.statusLabel.text = "Ничего не найдено"
+                    self.tableView.isHidden = true
+                    
+                case .error(let message):
+                    self.isSearching = true
+                    self.statusLabel.isHidden = false
+                    self.statusLabel.text = "Ошибка: \(message)"
+                    self.tableView.isHidden = true
+                }
+            }
         }
     }
 }
 
-// MARK: - UITableViewDataSource, UITableViewDelegate
+// MARK: - UITableViewDataSource & Delegate
 extension SavedCitiesViewController: UITableViewDataSource, UITableViewDelegate {
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return savedCities.count
+        return isSearching ? searchResults.count : viewModel.displayCities.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        guard let cell = tableView.dequeueReusableCell(withIdentifier: "CityWeatherCell", for: indexPath) as? CityWeatherCell else {
-            return UITableViewCell()
+        if isSearching {
+            let cell = tableView.dequeueReusableCell(withIdentifier: "SuggestionCell", for: indexPath)
+            let completion = searchResults[indexPath.row]
+            cell.textLabel?.text = completion.title + ", " + completion.subtitle
+            cell.textLabel?.textColor = .white
+            cell.backgroundColor = .clear
+            return cell
+        } else {
+            guard let cell = tableView.dequeueReusableCell(withIdentifier: "CityWeatherCell", for: indexPath) as? CityWeatherCell else {
+                return UITableViewCell()
+            }
+            let cityName = viewModel.displayCities[indexPath.row]
+            cell.configure(cityName: cityName)
+            
+            if indexPath.row == 0 {
+                cell.showLocationIcon()
+            }
+            return cell
         }
-        let cityName = savedCities[indexPath.row]
-        cell.configure(cityName: cityName)
-        return cell
     }
     
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        return 110
+        return isSearching ? 50 : 110
+    }
+    
+    // MARK: - Свайп для удаления (Задание из ТЗ)
+    func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        guard !isSearching, indexPath.row != 0 else { return nil }
+        
+        let deleteAction = UIContextualAction(style: .destructive, image: UIImage(systemName: "trash")) { [weak self] action, view, completion in
+            self?.viewModel.deleteCity(at: indexPath.row)
+            completion(true)
+        }
+        
+        return UISwipeActionsConfiguration(actions: [deleteAction])
+    }
+    
+    // MARK: - Выбор города из поиска
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        
+        if isSearching {
+            let selectedCompletion = searchResults[indexPath.row]
+            
+            viewModel.selectCompletion(selectedCompletion) { [weak self] coordinate, cityName in
+                guard let name = cityName else { return }
+                
+                self?.viewModel.saveNewCity(name)
+                
+                DispatchQueue.main.async {
+                    self?.searchField.text = ""
+                    self?.isSearching = false
+                    self?.viewModel.loadSavedCities()
+                    self?.delegate?.didSelectCity(at: 1)
+                    self?.dismiss(animated: true)
+                }
+            }
+        } else {
+            delegate?.didSelectCity(at: indexPath.row)
+            dismiss(animated: true)
+        }
     }
 }
 
-// MARK: - Custom Cell for Cities
-class CityWeatherCell: UITableViewCell {
-    
-    private let containerView: UIView = {
-        let view = UIView()
-        view.layer.cornerRadius = 16
-        view.clipsToBounds = true
-        return view
-    }()
-    
-    private let gradientLayer: CAGradientLayer = {
-        let gradient = CAGradientLayer()
-        gradient.colors = [
-            UIColor(red: 0.22, green: 0.44, blue: 0.69, alpha: 1.0).cgColor,
-            UIColor(red: 0.15, green: 0.31, blue: 0.51, alpha: 1.0).cgColor
-        ]
-        gradient.startPoint = CGPoint(x: 0, y: 0)
-        gradient.endPoint = CGPoint(x: 1, y: 1)
-        return gradient
-    }()
-    
-    private let cityNameLabel: UILabel = {
-        let label = UILabel()
-        label.font = .systemFont(ofSize: 22, weight: .bold)
-        label.textColor = .white
-        return label
-    }()
-    
-    private let timeLabel: UILabel = {
-        let label = UILabel()
-        label.text = "15:58"
-        label.font = .systemFont(ofSize: 13, weight: .regular)
-        label.textColor = .white.withAlphaComponent(0.8)
-        return label
-    }()
-    
-    private let weatherDescriptionLabel: UILabel = {
-        let label = UILabel()
-        label.text = "В основном облачно"
-        label.font = .systemFont(ofSize: 13, weight: .regular)
-        label.textColor = .white
-        return label
-    }()
-    
-    private let tempLabel: UILabel = {
-        let label = UILabel()
-        label.text = "11°"
-        label.font = .systemFont(ofSize: 48, weight: .light)
-        label.textColor = .white
-        return label
-    }()
-    
-    private let minMaxLabel: UILabel = {
-        let label = UILabel()
-        label.text = "Макс.: 11°, мин.: 5°"
-        label.font = .systemFont(ofSize: 12, weight: .regular)
-        label.textColor = .white.withAlphaComponent(0.8)
-        return label
-    }()
-    
-    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
-        super.init(style: style, reuseIdentifier: reuseIdentifier)
-        self.backgroundColor = .clear
-        self.selectionStyle = .none
-        setupUI()
-    }
-    
-    required init?(coder: NSCoder) { fatalError() }
-    
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        gradientLayer.frame = containerView.bounds
-    }
-    
-    private func setupUI() {
-        contentView.addSubview(containerView)
-        containerView.layer.insertSublayer(gradientLayer, at: 0)
-        
-        containerView.addSubview(cityNameLabel)
-        containerView.addSubview(timeLabel)
-        containerView.addSubview(weatherDescriptionLabel)
-        containerView.addSubview(tempLabel)
-        containerView.addSubview(minMaxLabel)
-        
-        containerView.snp.makeConstraints { make in
-            make.horizontalEdges.equalToSuperview().inset(16)
-            make.verticalEdges.equalToSuperview().inset(6)
-        }
-        
-        cityNameLabel.snp.makeConstraints { make in
-            make.top.leading.equalToSuperview().inset(16)
-        }
-        
-        timeLabel.snp.makeConstraints { make in
-            make.top.equalTo(cityNameLabel.snp.bottom).offset(2)
-            make.leading.equalToSuperview().inset(16)
-        }
-        
-        weatherDescriptionLabel.snp.makeConstraints { make in
-            make.bottom.leading.equalToSuperview().inset(16)
-        }
-        
-        tempLabel.snp.makeConstraints { make in
-            make.top.trailing.equalToSuperview().inset(12)
-        }
-        
-        minMaxLabel.snp.makeConstraints { make in
-            make.bottom.trailing.equalToSuperview().inset(16)
-        }
-    }
-    
-    func configure(cityName: String) {
-        cityNameLabel.text = cityName
+extension WeatherViewController: SavedCitiesViewControllerDelegate {
+    func didSelectCity(at index: Int) {
+        viewModel.selectCity(at: index)
     }
 }

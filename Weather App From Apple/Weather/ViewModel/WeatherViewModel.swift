@@ -52,6 +52,12 @@ class WeatherViewModel: LocationManagerDelegate {
         fetchWeatherForActiveIndex()
     }
     
+    func selectCity(at index: Int) {
+        guard index < savedCities.count else { return }
+        self.currentCityIndex = index
+        fetchWeatherForActiveIndex()
+    }
+    
     private func fetchWeatherForActiveIndex() {
         if currentCityIndex == 0 {
             print("Запрашиваем погоду по текущей геолокации...")
