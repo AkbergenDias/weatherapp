@@ -101,6 +101,7 @@ extension WeatherViewController: WeatherTabBarDelegate {
     
     private func openSavedCities() {
         let savedCitiesVC = SavedCitiesViewController()
+        savedCitiesVC.delegate = self
         savedCitiesVC.modalPresentationStyle = .pageSheet
         
         if let sheet = savedCitiesVC.sheetPresentationController {
@@ -109,5 +110,11 @@ extension WeatherViewController: WeatherTabBarDelegate {
         }
         
         present(savedCitiesVC, animated: true)
+    }
+}
+
+extension WeatherViewController: SavedCitiesViewControllerDelegate {
+    func didSelectCity(at index: Int) {
+        viewModel.selectCity(at: index)
     }
 }

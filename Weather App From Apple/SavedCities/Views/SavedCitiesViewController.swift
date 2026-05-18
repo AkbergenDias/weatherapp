@@ -98,17 +98,6 @@ class SavedCitiesViewController: UIViewController {
         viewModel.processSearchInput(searchField.text ?? "")
     }
     
-    private func openSavedCities() {
-        let savedCitiesVC = SavedCitiesViewController()
-        savedCitiesVC.delegate = self // Подписка на делегат
-        savedCitiesVC.modalPresentationStyle = .pageSheet
-        
-        if let sheet = savedCitiesVC.sheetPresentationController {
-            sheet.detents = [.medium(), .large()]
-            sheet.prefersGrabberVisible = true
-        }
-        present(savedCitiesVC, animated: true)
-    }
 }
 
 // MARK: - Биндинги состояний
@@ -199,12 +188,15 @@ extension SavedCitiesViewController: UITableViewDataSource, UITableViewDelegate 
     func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
         guard !isSearching, indexPath.row != 0 else { return nil }
         
-        let deleteAction = UIContextualAction(style: .destructive, image: UIImage(systemName: "trash")) { [weak self] action, view, completion in
+        let deleteAction = UIContextualAction(style: .destructive, title: nil) { [weak self] _, _, completion in
             self?.viewModel.deleteCity(at: indexPath.row)
             completion(true)
         }
-        
-        return UISwipeActionsConfiguration(actions: [deleteAction])
+        deleteAction.image = UIImage(systemName: "trash")
+        deleteAction.backgroundColor = .systemRed
+        let configuration = UISwipeActionsConfiguration(actions: [deleteAction])
+        configuration.performsFirstActionWithFullSwipe = false
+        return configuration
     }
     
     // MARK: - Выбор города из поиска
@@ -231,11 +223,5 @@ extension SavedCitiesViewController: UITableViewDataSource, UITableViewDelegate 
             delegate?.didSelectCity(at: indexPath.row)
             dismiss(animated: true)
         }
-    }
-}
-
-extension WeatherViewController: SavedCitiesViewControllerDelegate {
-    func didSelectCity(at index: Int) {
-        viewModel.selectCity(at: index)
     }
 }

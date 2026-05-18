@@ -62,3 +62,11 @@ struct DailyWeather {
     let maxTempWeek: Int
     let currentTemp: Int?
 }
+
+struct CityWeatherModel {
+    let name: String
+    let temperature: String
+    let conditionDescription: String
+    let minMaxTemp: String
+    let localTime: String
+}

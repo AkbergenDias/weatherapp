@@ -59,6 +59,17 @@ class SavedCitiesViewModel: NSObject {
         loadSavedCities()
     }
     
+    func saveNewCity(_ name: String) {
+        var saved = persistenceService.getSavedCities()
+        
+        if let existingIndex = saved.firstIndex(of: name) {
+            saved.remove(at: existingIndex)
+        }
+        saved.insert(name, at: 0)
+        
+        UserDefaults.standard.set(saved, forKey: "saved_cities_key")
+    }
+    
     // MARK: - Логика поиска (Debounce 0.35 сек)
     func processSearchInput(_ text: String) {
         debounceTimer?.invalidate()

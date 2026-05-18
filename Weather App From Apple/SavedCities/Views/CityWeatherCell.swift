@@ -91,6 +91,8 @@ class CityWeatherCell: UITableViewCell {
     private func setupUI() {
         contentView.addSubview(containerView)
         containerView.layer.insertSublayer(gradientLayer, at: 0)
+        contentView.layer.cornerRadius = 16
+        contentView.clipsToBounds = true
         
         containerView.addSubview(cityNameLabel)
         containerView.addSubview(locationIcon)
