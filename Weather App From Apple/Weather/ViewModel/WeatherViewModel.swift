@@ -14,99 +14,155 @@ enum WeatherState {
 }
 
 class WeatherViewModel: LocationManagerDelegate {
-    var onStateChange: ((WeatherState) -> Void)?
+    var stateCallbacks: [Int: (WeatherState) -> Void] = [:]
+    private var weatherStates: [Int: WeatherState] = [:]
     
     private let networkService: NetworkServiceProtocol
     private var locationManager: LocationManagerProtocol
     private let persistenceService: PersistenceServiceProtocol
     
-    private(set) var savedCities: [String] = []
-    private var currentCityIndex: Int = 0
+    var savedCities: [String] = []
+    var currentCityIndex: Int = 0
     
-    init(networkService: NetworkServiceProtocol, locationManager: LocationManagerProtocol, persistenceService: PersistenceServiceProtocol = DIContainer.shared.persistenceService) {
+    var onCitiesListRefreshed: (() -> Void)?
+    var onActiveIndexChanged: ((Int) -> Void)?
+    
+    private let apiKey = "6dc2788ca091c6b2364a1891d83f95f4"
+    
+    init(networkService: NetworkServiceProtocol,
+         locationManager: LocationManagerProtocol,
+         persistenceService: PersistenceServiceProtocol = DIContainer.shared.persistenceService) {
         self.networkService = networkService
         self.locationManager = locationManager
         self.persistenceService = persistenceService
-        loadCities()
-        locationManager.requestLocation()
         self.locationManager.delegate = self
+        loadCities()
+    }
+    
+    func start() {
+        onCitiesListRefreshed?()
+        locationManager.requestLocation()
+        fetchAllNamedCities()
     }
     
     func loadCities() {
         let saved = persistenceService.getSavedCities()
-        
         var list = ["Текущее место"]
         list.append(contentsOf: saved)
         self.savedCities = list
     }
     
-    func switchToNextCity() {
-        guard !savedCities.isEmpty else { return }
-        currentCityIndex = (currentCityIndex + 1) % savedCities.count
-        fetchWeatherForActiveIndex()
+    func reloadCities() {
+        loadCities()
+        stateCallbacks = [:]
+        onCitiesListRefreshed?()
+        locationManager.requestLocation()
+        fetchAllNamedCities()
     }
     
-    func switchToPreviousCity() {
-        guard !savedCities.isEmpty else { return }
-        currentCityIndex = (currentCityIndex - 1 + savedCities.count) % savedCities.count
-        fetchWeatherForActiveIndex()
+    // MARK: - State helpers
+    
+    func getState(for index: Int) -> WeatherState? {
+        return weatherStates[index]
     }
+    
+    private func setState(_ state: WeatherState, for index: Int) {
+        weatherStates[index] = state
+        DispatchQueue.main.async {
+            self.stateCallbacks[index]?(state)
+        }
+    }
+
+    // MARK: Navigation Helpers
     
     func selectCity(at index: Int) {
         guard index < savedCities.count else { return }
         self.currentCityIndex = index
-        fetchWeatherForActiveIndex()
+        onActiveIndexChanged?(index)
     }
     
-    private func fetchWeatherForActiveIndex() {
-        if currentCityIndex == 0 {
-            print("Запрашиваем погоду по текущей геолокации...")
+    func movePage(direction: PageDirection) {
+        let target = direction == .next ? currentCityIndex + 1 : currentCityIndex - 1
+        guard target >= 0 && target < savedCities.count else { return }
+        selectCity(at: target)
+    }
+    
+    // MARK: - Fetching
+    
+    func refreshWeather(for index: Int) {
+        currentCityIndex = index
+        if index == 0 {
             locationManager.requestLocation()
         } else {
-            let cityName = savedCities[currentCityIndex]
-            print("Запрашиваем погоду по названию города: \(cityName)")
+            let city = savedCities[index]
+            fetchWeather(forCityNamed: city, at: index)
         }
     }
-    
-    func refreshWeather() {
-        fetchWeatherForActiveIndex()
-    }
-    
-    func didUpdateLocation(lat: Double, lon: Double) {
-        onStateChange?(.loading)
-        print("Координаты получены: \(lat), \(lon)")
-        
-        //API оставил для домашки без git ignore
-        let apiKey = "6dc2788ca091c6b2364a1891d83f95f4"
-        guard let weatherUrl = URL(string:"https://api.openweathermap.org/data/2.5/weather?lat=\(lat)&lon=\(lon)&appid=\(apiKey)&units=metric"),
-            let forecastUrl = URL(string: "https://api.openweathermap.org/data/2.5/forecast?lat=\(lat)&lon=\(lon)&appid=\(apiKey)&units=metric"),
-            let uvUrl = URL(string: "https://api.openweathermap.org/data/2.5/uvi?lat=\(lat)&lon=\(lon)&appid=\(apiKey)")
-        else {
-            self.onStateChange?(.error("Ошибка формирования URL"))
-            return
-        }
-        
-        Task {
-            do {
-                async let weatherFetch: WeatherData = try await networkService.fetch(url: weatherUrl)
-                async let forecastFetch: ForecastResponse = try await networkService.fetch(url: forecastUrl)
-                async let uvFetch: UVResponse = try await networkService.fetch(url: uvUrl)
-                
-                let (weatherData, forecastData, uvData) = try await (weatherFetch, forecastFetch, uvFetch)
-                            
-                let uiModel = mapToUIModel(weatherData, forecastData: forecastData, uvData: uvData)
-                
-                await MainActor.run {
-                    self.onStateChange?(.success(uiModel))
-                }
-            } catch {
-                print("Full error: \(error)")
 
-                await MainActor.run { self.onStateChange?(.error(error.localizedDescription)) }
+    private func fetchAllNamedCities() {
+        for index in 1..<savedCities.count {
+            fetchWeather(forCityNamed: savedCities[index], at: index)
+        }
+    }
+    
+    private func fetchWeather(forCityNamed name: String, at index: Int) {
+            guard let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                  let weatherUrl = URL(string: "https://api.openweathermap.org/data/2.5/weather?q=\(encoded)&appid=\(apiKey)&units=metric"),
+                  let forecastUrl = URL(string: "https://api.openweathermap.org/data/2.5/forecast?q=\(encoded)&appid=\(apiKey)&units=metric")
+            else {
+                setState(.error("Ошибка формирования URL"), for: index)
+                return
+            }
+
+            setState(.loading, for: index)
+
+            Task {
+                do {
+                    async let weatherFetch: WeatherData = try await networkService.fetch(url: weatherUrl)
+                    async let forecastFetch: ForecastResponse = try await networkService.fetch(url: forecastUrl)
+                    let (weatherData, forecastData) = try await (weatherFetch, forecastFetch)
+                    let lat = weatherData.coord?.lat ?? 0
+                    let lon = weatherData.coord?.lon ?? 0
+                    guard let uvUrl = URL(string: "https://api.openweathermap.org/data/2.5/uvi?lat=\(lat)&lon=\(lon)&appid=\(apiKey)") else {
+                        throw URLError(.badURL)
+                    }
+                    let uvData: UVResponse = try await networkService.fetch(url: uvUrl)
+                    let uiModel = mapToUIModel(weatherData, forecastData: forecastData, uvData: uvData)
+                    setState(.success(uiModel), for: index)
+                } catch {
+                    setState(.error(error.localizedDescription), for: index)
+                }
             }
         }
-    }
-        
+    
+    // MARK: - LocationManagerDelegate
+    
+    func didUpdateLocation(lat: Double, lon: Double) {
+            setState(.loading, for: 0)
+
+            guard let weatherUrl = URL(string: "https://api.openweathermap.org/data/2.5/weather?lat=\(lat)&lon=\(lon)&appid=\(apiKey)&units=metric"),
+                  let forecastUrl = URL(string: "https://api.openweathermap.org/data/2.5/forecast?lat=\(lat)&lon=\(lon)&appid=\(apiKey)&units=metric"),
+                  let uvUrl = URL(string: "https://api.openweathermap.org/data/2.5/uvi?lat=\(lat)&lon=\(lon)&appid=\(apiKey)")
+            else {
+                setState(.error("Ошибка формирования URL"), for: 0)
+                return
+            }
+
+            Task {
+                do {
+                    async let weatherFetch: WeatherData = try await networkService.fetch(url: weatherUrl)
+                    async let forecastFetch: ForecastResponse = try await networkService.fetch(url: forecastUrl)
+                    async let uvFetch: UVResponse = try await networkService.fetch(url: uvUrl)
+                    let (weatherData, forecastData, uvData) = try await (weatherFetch, forecastFetch, uvFetch)
+                    let uiModel = mapToUIModel(weatherData, forecastData: forecastData, uvData: uvData)
+                    setState(.success(uiModel), for: 0)
+                } catch {
+                    setState(.error(error.localizedDescription), for: 0)
+                }
+            }
+        }
+    
+    // MARK: - Mapping
     private func mapToUIModel(_ weatherData: WeatherData, forecastData: ForecastResponse, uvData: UVResponse) -> WeatherUIModel {
         
         // Hourly and Daily

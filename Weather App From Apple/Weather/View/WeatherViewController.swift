@@ -11,11 +11,14 @@ import SnapKit
 class WeatherViewController: UIViewController {
     
     private let viewModel: WeatherViewModel
+    private let cityIndex: Int
+    
     private let gradientLayer = GradientManager.getGradient(for: .current())
     private let mainView = WeatherMainView()
     private let tabBarView = WeatherTabBarView()
     
-    init(viewModel: WeatherViewModel) {
+    init(cityIndex: Int, viewModel: WeatherViewModel) {
+        self.cityIndex = cityIndex
         self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
     }
@@ -34,7 +37,7 @@ class WeatherViewController: UIViewController {
         setupBindings()
         setupMainUI()
         mainView.refreshControl.addTarget(self, action: #selector(didPullToRefresh), for: .valueChanged)
-        print("WeatherViewController загружен")
+        print("WeatherViewController для города с индексом \(cityIndex) загружен")
     }
     
     private func setupMainUI() {
@@ -60,14 +63,30 @@ class WeatherViewController: UIViewController {
     
     
     private func setupBindings() {
-        viewModel.onStateChange = { [weak self] state in
-            self?.mainView.updateState(state)
+        if let state = viewModel.getState(for: cityIndex) {
+            mainView.updateState(state)
+        }
+
+        viewModel.stateCallbacks[cityIndex] = { [weak self] state in
+            guard let self else { return }
+            DispatchQueue.main.async {
+                self.mainView.updateState(state)
+                switch state {
+                case .success, .error:
+                    self.mainView.refreshControl.endRefreshing()
+                case .loading:
+                    break
+                }
+            }
         }
     }
     
     @objc private func didPullToRefresh() {
-        viewModel.refreshWeather()
-        print("Обновление данных.....")
+        viewModel.refreshWeather(for: cityIndex)
+    }
+    
+    deinit {
+        viewModel.stateCallbacks[cityIndex] = nil
     }
 }
 
@@ -82,39 +101,20 @@ extension WeatherViewController: WeatherTabBarDelegate {
     }
     
     func tabBarDidTapRight() {
-        openSavedCities()
+        (parent as? WeatherPageViewController)?.openSavedCitiesList()
     }
     
     func tabBarDidSwipeUp() {
-        openSavedCities()
+        (parent as? WeatherPageViewController)?.openSavedCitiesList()
     }
     
     func tabBarDidSwipeLeft() {
         print("Свайп влево: переключаем на следующий город")
-        viewModel.switchToNextCity()
+        (parent as? WeatherPageViewController)?.movePage(direction: .next)
     }
     
     func tabBarDidSwipeRight() {
         print("Свайп вправо: переключаем на предыдущий город")
-        viewModel.switchToPreviousCity()
-    }
-    
-    private func openSavedCities() {
-        let savedCitiesVC = SavedCitiesViewController()
-        savedCitiesVC.delegate = self
-        savedCitiesVC.modalPresentationStyle = .pageSheet
-        
-        if let sheet = savedCitiesVC.sheetPresentationController {
-            sheet.detents = [.large()]
-            sheet.prefersGrabberVisible = true
-        }
-        
-        present(savedCitiesVC, animated: true)
-    }
-}
-
-extension WeatherViewController: SavedCitiesViewControllerDelegate {
-    func didSelectCity(at index: Int) {
-        viewModel.selectCity(at: index)
+        (parent as? WeatherPageViewController)?.movePage(direction: .previous)
     }
 }

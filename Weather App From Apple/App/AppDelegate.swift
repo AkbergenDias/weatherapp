@@ -18,12 +18,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         let container = DIContainer.shared
         
-        let viewModel = WeatherViewModel(
+        _ = WeatherViewModel(
             networkService: container.networkService,
             locationManager: container.locationManager
         )
         
-        let rootVC = WeatherViewController(viewModel: viewModel)
+        let rootVC = WeatherPageViewController()
         self.window?.rootViewController = rootVC
         
         self.window?.makeKeyAndVisible()

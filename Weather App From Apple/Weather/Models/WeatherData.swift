@@ -14,6 +14,7 @@ struct WeatherData: Codable {
     let weather: [WeatherResponse]
     let wind: WindResponse
     let sys: SysResponse?
+    let coord: Coordinates?
 }
 
 // MARK: 5-Day Forecast
@@ -66,4 +67,9 @@ struct UVResponse: Decodable {
 struct SysResponse: Codable {
     let sunrise: Int
     let sunset: Int
+}
+
+struct Coordinates: Codable {
+    let lat: Double
+    let lon: Double
 }
