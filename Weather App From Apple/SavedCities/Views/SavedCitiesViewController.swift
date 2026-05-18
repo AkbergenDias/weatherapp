@@ -55,7 +55,7 @@ class SavedCitiesViewController: UIViewController {
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor(red: 0.1, green: 0.18, blue: 0.28, alpha: 1.0)
+        view.backgroundColor = AppColorManager.mainBackground
         
         setupUI()
         setupBindings()
