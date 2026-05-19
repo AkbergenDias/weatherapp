@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "pagination=1 screen.svg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

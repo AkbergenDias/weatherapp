@@ -80,38 +80,27 @@ class WeatherTabBarView: UIView {
         let swipeUp = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipeUp))
         swipeUp.direction = .up
         self.addGestureRecognizer(swipeUp)
-        
-        let swipeLeft = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipeLeft))
-        swipeLeft.direction = .left
-        centerButton.addGestureRecognizer(swipeLeft)
-        
-        let swipeRight = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipeRight))
-        swipeRight.direction = .right
-        centerButton.addGestureRecognizer(swipeRight)
     }
     
     // MARK: - Actions
-    @objc private func leftTapped() {
-        delegate?.tabBarDidTapLeft()
-    }
+    @objc private func leftTapped() { delegate?.tabBarDidTapLeft() }
+    @objc private func centerTapped() { delegate?.tabBarDidTapCenter() }
+    @objc private func rightTapped() { delegate?.tabBarDidTapRight() }
+    @objc private func handleSwipeUp() { delegate?.tabBarDidSwipeUp() }
     
-    @objc private func centerTapped() {
-        delegate?.tabBarDidTapCenter()
-    }
-    
-    @objc private func rightTapped() {
-        delegate?.tabBarDidTapRight()
-    }
-    
-    @objc private func handleSwipeUp() {
-        delegate?.tabBarDidSwipeUp()
-    }
-    
-    @objc private func handleSwipeLeft() {
-        delegate?.tabBarDidSwipeLeft()
-    }
-    
-    @objc private func handleSwipeRight() {
-        delegate?.tabBarDidSwipeRight()
+    // MARK: - Public Methods
+    func updatePageIndicator(for index: Int) {
+        let imageName: String
+        
+        switch index {
+        case 0:
+            imageName = "pagination1"
+        case 1:
+            imageName = "pagination2"
+        default:
+            imageName = "pagination3"
+        }
+        
+        centerButton.setImage(UIImage(named: imageName), for: .normal)
     }
 }

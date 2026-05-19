@@ -22,9 +22,9 @@ class WeatherPageViewController: UIPageViewController {
     )
     
     private var pages: [UIViewController] = []
-//    private let indicatorView = CityPageIndicatorView()
     
     private var savedCitiesVC: SavedCitiesViewController?
+    private var tabBarView: WeatherTabBarView?
     
     init() {
         super.init(transitionStyle: .scroll, navigationOrientation: .horizontal, options: nil)
@@ -40,22 +40,15 @@ class WeatherPageViewController: UIPageViewController {
         viewModel.start()
     }
     
-    // MARK: - Indicator
-//    private func setupIndicator() {
-//        view.addSubview(indicatorView)
-//        indicatorView.snp.makeConstraints { make in
-//            make.centerX.equalToSuperview()
-//            make.bottom.equalTo(view.safeAreaLayoutGuide).offset(-88)   // above tab bar
-//        }
-//    }
-    
     // MARK: - Bindings
     private func setupBindings() {
         viewModel.onCitiesListRefreshed = { [weak self] in
             DispatchQueue.main.async { self?.rebuildPages() }
         }
         viewModel.onActiveIndexChanged = { [weak self] newIndex in
-            DispatchQueue.main.async { self?.switchToPage(at: newIndex) }
+            DispatchQueue.main.async {
+                self?.switchToPage(at: newIndex)
+                self?.tabBarView?.updatePageIndicator(for: newIndex)}
         }
     }
 
@@ -70,7 +63,6 @@ class WeatherPageViewController: UIPageViewController {
             setViewControllers([firstPage], direction: .forward, animated: false)
         }
 
-//        indicatorView.configure(count: pages.count, activeIndex: targetIndex)
     }
     
     private func switchToPage(at index: Int) {
@@ -81,7 +73,6 @@ class WeatherPageViewController: UIPageViewController {
         viewModel.currentCityIndex = index
 
         setViewControllers([targetVC], direction: direction, animated: true)
-//        indicatorView.setActive(index: index)
     }
     
     func movePage(direction: PageDirection) {
@@ -102,7 +93,6 @@ class WeatherPageViewController: UIPageViewController {
         }
         savedCitiesVC = vc
 
-        // Add as child so we control the animation fully
         addChild(vc)
         vc.view.frame = window.bounds
         vc.view.transform = CGAffineTransform(translationX: 0, y: window.bounds.height)
@@ -116,7 +106,6 @@ class WeatherPageViewController: UIPageViewController {
                        options: .curveEaseOut) {
             self.viewControllers?.first?.view.transform =
                 CGAffineTransform(scaleX: 0.92, y: 0.92)
-//            self.indicatorView.alpha = 0
             vc.view.transform = .identity
         }
     }
@@ -130,7 +119,6 @@ private func closeSavedCitiesList() {
                        initialSpringVelocity: 0.5,
                        options: .curveEaseIn) {
             self.viewControllers?.first?.view.transform = .identity
-//            self.indicatorView.alpha = 1
             vc.view.transform = CGAffineTransform(translationX: 0, y: self.view.bounds.height)
         } completion: { _ in
             vc.view.removeFromSuperview()
@@ -164,6 +152,7 @@ extension WeatherPageViewController: UIPageViewControllerDelegate {
            let currentVC = pageViewController.viewControllers?.first,
            let newIndex = pages.firstIndex(of: currentVC) {
             viewModel.currentCityIndex = newIndex
+            tabBarView?.updatePageIndicator(for: newIndex)
         }
     }
 }
