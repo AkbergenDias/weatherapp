@@ -68,9 +68,18 @@ class WeatherPageViewController: UIPageViewController {
     
     private func switchToPage(at index: Int) {
         guard let targetVC = pages.safeObject(at: index) else { return }
+        
+        let current = viewModel.currentCityIndex
+        let count = pages.count
 
-        let direction: UIPageViewController.NavigationDirection =
-            index >= viewModel.currentCityIndex ? .forward : .reverse
+        let direction: UIPageViewController.NavigationDirection
+        if index == 0 && current == count - 1 {
+            direction = .forward
+        } else if index == count - 1 && current == 0 {
+            direction = .reverse
+        } else {
+            direction = index >= current ? .forward : .reverse
+        }
         viewModel.currentCityIndex = index
 
         setViewControllers([targetVC], direction: direction, animated: true)
@@ -138,14 +147,17 @@ extension WeatherPageViewController: UIPageViewControllerDataSource {
     
     // Left
     func pageViewController(_ pageViewController: UIPageViewController, viewControllerBefore viewController: UIViewController) -> UIViewController? {
-        guard let currentIndex = pages.firstIndex(of: viewController) else { return nil }
-        return pages.safeObject(at: currentIndex - 1)
-    }
-    
+            guard pages.count > 1,
+                  let currentIndex = pages.firstIndex(of: viewController) else { return nil }
+            let previousIndex = currentIndex == 0 ? pages.count - 1 : currentIndex - 1
+            return pages[previousIndex]
+        }
     // Right
     func pageViewController(_ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController) -> UIViewController? {
-        guard let currentIndex = pages.firstIndex(of: viewController) else { return nil }
-        return pages.safeObject(at: currentIndex + 1)
+        guard pages.count > 1,
+              let currentIndex = pages.firstIndex(of: viewController) else { return nil }
+        let nextIndex = currentIndex == pages.count - 1 ? 0 : currentIndex + 1
+        return pages[nextIndex]
     }
 }
 
@@ -153,15 +165,14 @@ extension WeatherPageViewController: UIPageViewControllerDataSource {
 extension WeatherPageViewController: UIPageViewControllerDelegate {
     
     func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool, previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
-        if completed,
+        guard completed,
            let currentVC = pageViewController.viewControllers?.first,
-           let newIndex = pages.firstIndex(of: currentVC) {
+              let newIndex = pages.firstIndex(of: currentVC) else { return }
             viewModel.currentCityIndex = newIndex
             updateCurrentPageIndicator(for: newIndex)
             HapticManager.lightImpact()
         }
     }
-}
 
 // MARK: - SavedCitiesViewControllerDelegate
 extension WeatherPageViewController: SavedCitiesViewControllerDelegate {
