@@ -57,7 +57,10 @@ class WeatherViewModel: LocationManagerDelegate {
         stateCallbacks = [:]
         onCitiesListRefreshed?()
         locationManager.requestLocation()
-        fetchAllNamedCities()
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.fetchAllNamedCities()
+            }
     }
     
     // MARK: - State helpers

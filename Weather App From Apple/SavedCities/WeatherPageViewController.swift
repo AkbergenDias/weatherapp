@@ -33,7 +33,7 @@ class WeatherPageViewController: UIPageViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor(red: 0.1, green: 0.18, blue: 0.28, alpha: 1.0)
+        view.backgroundColor = AppColorManager.mainBackground
         dataSource = self
         delegate = self
         setupBindings()
@@ -173,6 +173,18 @@ extension WeatherPageViewController: SavedCitiesViewControllerDelegate {
     func didSelectCity(at index: Int) {
         closeSavedCitiesList()
         switchToPage(at: index)
+    }
+    
+    func didAddNewCity(_ cityName: String) {
+        closeSavedCitiesList()
+        
+        viewModel.reloadCities()
+        rebuildPages()
+        
+        let targetIndex = 1
+        viewModel.currentCityIndex = targetIndex
+        guard let targetVC = pages.safeObject(at: targetIndex) else { return }
+        setViewControllers([targetVC], direction: .forward, animated: false, completion: nil)
     }
 
     func didUpdateCitiesList() {

@@ -37,7 +37,7 @@ class SavedCitiesViewModel: NSObject {
         loadSavedCities()
     }
     
-    // MARK: - Логика списка городов
+    // MARK: - Load Saved Cities
     func loadSavedCities() {
         let saved = persistenceService.getSavedCities()
         var list = ["Моя локация"]
@@ -68,9 +68,10 @@ class SavedCitiesViewModel: NSObject {
         saved.insert(name, at: 0)
         
         UserDefaults.standard.set(saved, forKey: "saved_cities_key")
+        loadSavedCities()
     }
     
-    // MARK: - Логика поиска (Debounce 0.35 сек)
+    // MARK: - Search Cities
     func processSearchInput(_ text: String) {
         debounceTimer?.invalidate()
         

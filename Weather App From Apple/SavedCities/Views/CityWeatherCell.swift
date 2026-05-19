@@ -17,16 +17,14 @@ class CityWeatherCell: UITableViewCell {
         return view
     }()
     
-    private let gradientLayer: CAGradientLayer = {
-        let gradient = CAGradientLayer()
-        gradient.colors = [
-            UIColor(red: 0.22, green: 0.44, blue: 0.69, alpha: 1.0).cgColor,
-            UIColor(red: 0.15, green: 0.31, blue: 0.51, alpha: 1.0).cgColor
-        ]
-        gradient.startPoint = CGPoint(x: 0, y: 0)
-        gradient.endPoint = CGPoint(x: 1, y: 1)
-        return gradient
+    private let backgroundImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.isHidden = true
+        return imageView
     }()
+
     
     private let cityNameLabel: UILabel = {
         let label = UILabel()
@@ -83,17 +81,12 @@ class CityWeatherCell: UITableViewCell {
     
     required init?(coder: NSCoder) { fatalError() }
     
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        gradientLayer.frame = containerView.bounds
-    }
-    
     private func setupUI() {
         contentView.addSubview(containerView)
-        containerView.layer.insertSublayer(gradientLayer, at: 0)
         contentView.layer.cornerRadius = 16
         contentView.clipsToBounds = true
         
+        containerView.addSubview(backgroundImageView)
         containerView.addSubview(cityNameLabel)
         containerView.addSubview(locationIcon)
         containerView.addSubview(timeLabel)
@@ -104,6 +97,10 @@ class CityWeatherCell: UITableViewCell {
         containerView.snp.makeConstraints { make in
             make.horizontalEdges.equalToSuperview().inset(16)
             make.verticalEdges.equalToSuperview().inset(6)
+        }
+        
+        backgroundImageView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
         }
         
         cityNameLabel.snp.makeConstraints { make in
@@ -136,6 +133,44 @@ class CityWeatherCell: UITableViewCell {
     
     func configure(cityName: String, weatherState: WeatherState?, isCurrentLocation: Bool) {
         cityNameLabel.text = cityName
+        locationIcon.isHidden = !isCurrentLocation
+        
+        // Текущее время устройства (можно заменить на таймзону города при желании)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        timeLabel.text = formatter.string(from: Date())
+        
+        switch weatherState {
+        case .loading:
+            weatherDescriptionLabel.text = "Загрузка..."
+            tempLabel.text = "--"
+            minMaxLabel.text = ""
+            backgroundImageView.isHidden = true
+            
+        case .success(let model):
+            weatherDescriptionLabel.text = model.description
+            tempLabel.text = model.temperature
+            minMaxLabel.text = model.minMax
+            
+            if let backgroundImage = UIImage(named: model.backgroundImageName) {
+                backgroundImageView.image = backgroundImage
+                backgroundImageView.isHidden = false
+            } else {
+                backgroundImageView.isHidden = true
+            }
+            
+        case .error(let message):
+            weatherDescriptionLabel.text = "Ошибка"
+            tempLabel.text = "!"
+            minMaxLabel.text = message
+            backgroundImageView.isHidden = true
+            
+        case .none:
+            weatherDescriptionLabel.text = "Ожидание запроса..."
+            tempLabel.text = "--"
+            minMaxLabel.text = ""
+            backgroundImageView.isHidden = true
+        }
     }
     
     func showLocationIcon() {
@@ -145,5 +180,7 @@ class CityWeatherCell: UITableViewCell {
     override func prepareForReuse() {
         super.prepareForReuse()
         locationIcon.isHidden = true
+        backgroundImageView.isHidden = true
+        backgroundImageView.image = nil
     }
 }

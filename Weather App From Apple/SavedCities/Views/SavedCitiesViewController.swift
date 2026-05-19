@@ -11,6 +11,7 @@ import MapKit
 
 protocol SavedCitiesViewControllerDelegate: AnyObject {
     func didSelectCity(at index: Int)
+    func didAddNewCity(_ cityName: String)
 }
 
 class SavedCitiesViewController: UIViewController {
@@ -211,11 +212,14 @@ extension SavedCitiesViewController: UITableViewDataSource, UITableViewDelegate 
                 self.viewModel.saveNewCity(cityName)
                 
                 DispatchQueue.main.async { [weak self] in
-                    self?.searchField.text = ""
-                    self?.isSearching = false
-                    self?.viewModel.loadSavedCities()
-                    self?.delegate?.didSelectCity(at: 1)
-                    self?.dismiss(animated: true)
+                    guard let self = self else { return }
+                    self.searchField.text = ""
+                    self.isSearching = false
+                    
+                    self.viewModel.loadSavedCities()
+                    
+                    self.delegate?.didAddNewCity(cityName)
+                    self.dismiss(animated: true)
                 }
             }
         } else {
