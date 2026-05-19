@@ -24,7 +24,6 @@ class WeatherPageViewController: UIPageViewController {
     private var pages: [UIViewController] = []
     
     private var savedCitiesVC: SavedCitiesViewController?
-    private var tabBarView: WeatherTabBarView?
     
     init() {
         super.init(transitionStyle: .scroll, navigationOrientation: .horizontal, options: nil)
@@ -48,7 +47,8 @@ class WeatherPageViewController: UIPageViewController {
         viewModel.onActiveIndexChanged = { [weak self] newIndex in
             DispatchQueue.main.async {
                 self?.switchToPage(at: newIndex)
-                self?.tabBarView?.updatePageIndicator(for: newIndex)}
+                self?.updateCurrentPageIndicator(for: newIndex)
+            }
         }
     }
 
@@ -61,6 +61,7 @@ class WeatherPageViewController: UIPageViewController {
         let targetIndex = min(viewModel.currentCityIndex, max(0, pages.count - 1))
         if let firstPage = pages.safeObject(at: targetIndex) {
             setViewControllers([firstPage], direction: .forward, animated: false)
+        updateCurrentPageIndicator(for: targetIndex)
         }
 
     }
@@ -82,6 +83,10 @@ class WeatherPageViewController: UIPageViewController {
         
         guard targetIndex >= 0 && targetIndex < pages.count else { return }
         switchToPage(at: targetIndex)
+    }
+        
+    private func updateCurrentPageIndicator(for index: Int) {
+        (viewControllers?.first as? WeatherViewController)?.updatePageIndicator(for: index)
     }
     
     func openSavedCitiesList() {
@@ -152,7 +157,8 @@ extension WeatherPageViewController: UIPageViewControllerDelegate {
            let currentVC = pageViewController.viewControllers?.first,
            let newIndex = pages.firstIndex(of: currentVC) {
             viewModel.currentCityIndex = newIndex
-            tabBarView?.updatePageIndicator(for: newIndex)
+            updateCurrentPageIndicator(for: newIndex)
+            HapticManager.lightImpact()
         }
     }
 }
@@ -166,19 +172,16 @@ extension WeatherPageViewController: SavedCitiesViewControllerDelegate {
     
     func didAddNewCity(_ cityName: String) {
         closeSavedCitiesList()
-        
         viewModel.reloadCities()
-        rebuildPages()
         
-        let targetIndex = 1
-        viewModel.currentCityIndex = targetIndex
-        guard let targetVC = pages.safeObject(at: targetIndex) else { return }
-        setViewControllers([targetVC], direction: .forward, animated: false, completion: nil)
+        DispatchQueue.main.async { [weak self] in
+            self?.switchToPage(at: 1)
+            self?.updateCurrentPageIndicator(for: 1)
+        }
     }
 
     func didUpdateCitiesList() {
         closeSavedCitiesList()
-        // If the current city was deleted, clamp to a valid neighbour
         let safeIndex = min(viewModel.currentCityIndex, max(0, viewModel.savedCities.count - 1))
         viewModel.currentCityIndex = safeIndex
         viewModel.reloadCities()

@@ -62,6 +62,10 @@ class WeatherViewController: UIViewController {
         gradientLayer.frame = view.bounds
     }
     
+    func updatePageIndicator(for index: Int) {
+        tabBarView.updatePageIndicator(for: index)
+    }
+    
     
     private func setupBindings() {
         if let state = viewModel.getState(for: cityIndex) {

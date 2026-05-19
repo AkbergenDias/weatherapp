@@ -188,6 +188,7 @@ extension SavedCitiesViewController: UITableViewDataSource, UITableViewDelegate 
         guard !isSearching, indexPath.row != 0 else { return nil }
         
         let deleteAction = UIContextualAction(style: .destructive, title: nil) { [weak self] _, _, completion in
+            HapticManager.heavyImpact()
             self?.viewModel.deleteCity(at: indexPath.row)
             completion(true)
         }

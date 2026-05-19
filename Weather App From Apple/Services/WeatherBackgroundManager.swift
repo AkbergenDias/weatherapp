@@ -23,9 +23,9 @@ struct WeatherBackgroundManager {
 
     static func getBackgroundImageName(for date: Date = Date(), conditionCode: String) -> String {
         let timeOfDay = getTimeOfDay(from: date)
-        let weatherCondition = getWeatherCondition(from: conditionCode)
+        let condition = getWeatherCondition(from: conditionCode)
         
-        return "\(weatherCondition.rawValue)\(timeOfDay.rawValue)Background"
+        return "\(condition.rawValue)\(timeOfDay.rawValue)Background"
     }
     
     private static func getTimeOfDay(from date: Date) -> TimeOfDay {
@@ -44,8 +44,10 @@ struct WeatherBackgroundManager {
     }
     
     private static func getWeatherCondition(from condition: String) -> WeatherCondition {
-        let lowercased = condition.lowercased()
-        if lowercased.contains("rain") || lowercased.contains("drizzle") || lowercased.contains("thunderstorm") {
+        let lower = condition.lowercased()
+        if lower.contains("rain") || lower.contains("drizzle") || lower.contains("thunderstorm") || lower.contains("snow")
+            || lower.hasPrefix("09") || lower.hasPrefix("10")
+            || lower.hasPrefix("11") || lower.hasPrefix("13") {
             return .rainy
         }
         return .clear

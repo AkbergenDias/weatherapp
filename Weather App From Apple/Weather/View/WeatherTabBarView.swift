@@ -83,10 +83,22 @@ class WeatherTabBarView: UIView {
     }
     
     // MARK: - Actions
-    @objc private func leftTapped() { delegate?.tabBarDidTapLeft() }
-    @objc private func centerTapped() { delegate?.tabBarDidTapCenter() }
-    @objc private func rightTapped() { delegate?.tabBarDidTapRight() }
-    @objc private func handleSwipeUp() { delegate?.tabBarDidSwipeUp() }
+    @objc private func leftTapped() {
+        HapticManager.selectionImpact()
+        delegate?.tabBarDidTapLeft()
+    }
+    @objc private func centerTapped() {
+        HapticManager.selectionImpact()
+        delegate?.tabBarDidTapCenter()
+    }
+    @objc private func rightTapped() {
+        HapticManager.selectionImpact()
+        delegate?.tabBarDidTapRight()
+    }
+    @objc private func handleSwipeUp() {
+        HapticManager.lightImpact()
+        delegate?.tabBarDidSwipeUp()
+    }
     
     // MARK: - Public Methods
     func updatePageIndicator(for index: Int) {

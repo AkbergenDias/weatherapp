@@ -185,12 +185,12 @@ class WeatherViewModel: LocationManagerDelegate {
         
         // Km/h from m/s
         let speedKmH = Int(weatherData.wind.speed * 3.6)
-        let windSpeedStr = "\(speedKmH) км/ч"
-
+        let windSpeedStr = formatWind(weatherData.wind.speed)
+        
         // Gusts
         let gustKmH = weatherData.wind.gust.map { Int($0 * 3.6) }
-        let windGustStr = gustKmH != nil ? "\(gustKmH!) км/ч" : "-- км/ч"
-
+        let windGustStr = weatherData.wind.gust.map { formatWind($0) } ?? "--"
+        
         // Wind direction
         let windDirStr = weatherData.wind.deg != nil ? getWindDirection(degrees: weatherData.wind.deg!) : "--"
         
@@ -262,20 +262,20 @@ class WeatherViewModel: LocationManagerDelegate {
         // UIModel
         return WeatherUIModel(
             cityName: weatherData.name,
-            temperature: "\(Int(weatherData.main.temp))°",
+            temperature: formatTemp(weatherData.main.temp),
             description: weatherData.weather.first?.description.capitalized ?? "",
             summary: "Ветер: \(Int(weatherData.wind.speed)) км/ч",
             minMax: "Макс: \(Int(weatherData.main.tempMax))°  Мин: \(Int(weatherData.main.tempMin))°",
             hourlyForecast: hourlyModels,
             dailyForecast: dailyModels,
-            feelsLike: "\(Int(weatherData.main.feelsLike))°",
+            feelsLike: formatTemp(weatherData.main.feelsLike),
             uvIndex: "\(Int(uvData.value))",
             
             averageDiff: diffString,
             averageDesc: descString,
-            todayMax: "\(Int(todayMaxTemp))°",
-            averageMax: "\(Int(calculatedAverageMax))°",
-            
+            todayMax: formatTemp(todayMaxTemp),
+            averageMax: formatTemp(calculatedAverageMax),
+
             windSpeed: windSpeedStr,
             windGusts: windGustStr,
             windDirection: windDirStr,
@@ -308,7 +308,7 @@ class WeatherViewModel: LocationManagerDelegate {
             return HourlyWeather(
                 time: formatter.string(from: date),
                 icon: WeatherIconManager.getIcon(for: iconCode) ?? UIImage(),
-                temp: "\(Int(item.main.temp))°",
+                temp: formatTemp(item.main.temp),
                 iconCode: iconCode
             )
         }
@@ -332,7 +332,7 @@ class WeatherViewModel: LocationManagerDelegate {
         return items.map { item in
             let date = Date(timeIntervalSince1970: TimeInterval(item.dt))
             let formatter = DateFormatter()
-            formatter.locale = Locale(identifier: "ru_RU")
+            formatter.locale = Locale.current
             formatter.dateFormat = Calendar.current.isDateInToday(date) ? "'Сегодня'" : "EEE"
             
             let isToday = Calendar.current.isDateInToday(date)
@@ -357,5 +357,46 @@ class WeatherViewModel: LocationManagerDelegate {
     
     func didFailWithError(error: Error) {
         print("Ошибка геолокации: \(error.localizedDescription)")
+    }
+    
+    // MARK: - Locale Formatters
+
+    private static let temperatureFormatter: MeasurementFormatter = {
+        let f = MeasurementFormatter()
+        f.unitStyle = .short
+        f.numberFormatter.maximumFractionDigits = 0
+        return f
+    }()
+
+    private static let windFormatter: MeasurementFormatter = {
+        let f = MeasurementFormatter()
+        f.unitStyle = .short
+        f.numberFormatter.maximumFractionDigits = 0
+        return f
+    }()
+
+    private func formatTemp(_ celsius: Double) -> String {
+        let input = Measurement(value: celsius, unit: UnitTemperature.celsius)
+        let usesMetric = Locale.current.usesMetricSystem
+        let converted = usesMetric
+            ? input
+            : input.converted(to: .fahrenheit)
+        return Self.temperatureFormatter.string(from: converted)
+    }
+
+    private func formatWind(_ metersPerSecond: Double) -> String {
+        let input = Measurement(value: metersPerSecond, unit: UnitSpeed.metersPerSecond)
+        let usesMetric = Locale.current.usesMetricSystem
+        let converted = usesMetric
+            ? input.converted(to: .kilometersPerHour)
+            : input.converted(to: .milesPerHour)
+        return Self.windFormatter.string(from: converted)
+    }
+
+    private func formatDate(_ timestamp: TimeInterval, format: String) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.dateFormat = format
+        return formatter.string(from: Date(timeIntervalSince1970: timestamp))
     }
 }

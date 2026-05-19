@@ -147,7 +147,6 @@ class WeatherMainView: UIView {
             weatherHourlySectionView.isHidden = true
             weatherDailySectionView.isHidden = true
             widgetsVerticalStack.isHidden = true
-            backgroundImageView.isHidden = true
 
         case .success(let model):
             activityIndicator.stopAnimating()
@@ -158,7 +157,7 @@ class WeatherMainView: UIView {
             widgetsVerticalStack.isHidden = false
             backgroundImageView.isHidden = false
             
-            backgroundImageView.image = UIImage(named: model.backgroundImageName)
+            backgroundImageView.image = UIImage(named: model.backgroundImageName) ?? UIImage(named: "ClearDayBackground")
             
             headerView.configure(
                 city: model.cityName,
