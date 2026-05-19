@@ -224,4 +224,22 @@ class WeatherMainView: UIView {
             print("Ошибка: \(message)")
         }
     }
+    
+    func playEntranceAnimation() {
+        let sections: [UIView] = [widgetsVerticalStack, weatherDailySectionView, weatherDailySectionView, headerView]
+
+        sections.enumerated().forEach { i, section in
+            section.alpha = 0
+            section.transform = CGAffineTransform(translationX: 0, y: 40)
+
+            UIView.animate(withDuration: 0.5,
+                           delay: Double(i) * 0.08,
+                           usingSpringWithDamping: 0.8,
+                           initialSpringVelocity: 0.3,
+                           options: .curveEaseOut) {
+                section.alpha = 1
+                section.transform = .identity
+            }
+        }
+    }
 }

@@ -14,7 +14,7 @@ final class PageIndicatorView: UIView {
         dots = (0..<count).map { i in
             let iv = UIImageView()
             iv.contentMode = .scaleAspectFit
-            // Replace these names with your actual asset names
+            // Replace these
             iv.image = UIImage(named: i == 0 ? "dotLocation" : "dotInactive")
             return iv
         }

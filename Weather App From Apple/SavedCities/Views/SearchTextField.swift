@@ -28,7 +28,6 @@ class SearchTextField: UITextField {
             attributes: [NSAttributedString.Key.foregroundColor: UIColor.white.withAlphaComponent(0.4)]
         )
         
-        // Иконка поиска слева
         let searchIcon = UIImageView(image: UIImage(systemName: "magnifyingglass"))
         searchIcon.tintColor = .white.withAlphaComponent(0.4)
         searchIcon.contentMode = .scaleAspectFit
@@ -43,7 +42,6 @@ class SearchTextField: UITextField {
         self.leftView = leftPaddingView
         self.leftViewMode = .always
         
-        // Кнопка очистки справа
         let clearButton = UIButton(type: .custom)
         clearButton.setImage(UIImage(systemName: "xmark.circle.fill"), for: .normal)
         clearButton.tintColor = .white.withAlphaComponent(0.4)
@@ -60,7 +58,6 @@ class SearchTextField: UITextField {
         self.rightViewMode = .whileEditing
     }
     
-    // Корректируем размеры вьюшек-контейнеров для SnapKit
     override func leftViewRect(forBounds bounds: CGRect) -> CGRect {
         return CGRect(x: 0, y: 0, width: 36, height: bounds.height)
     }

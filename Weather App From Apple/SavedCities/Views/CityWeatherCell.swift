@@ -134,7 +134,7 @@ class CityWeatherCell: UITableViewCell {
         }
     }
     
-    func configure(cityName: String) {
+    func configure(cityName: String, weatherState: WeatherState?, isCurrentLocation: Bool) {
         cityNameLabel.text = cityName
     }
     

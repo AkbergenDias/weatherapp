@@ -97,13 +97,16 @@ class WeatherPageViewController: UIPageViewController {
         guard let window = view.window else { return }
         let vc = SavedCitiesViewController()
         vc.delegate = self
+        vc.weatherStateProvider = { [weak self] index in
+            self?.viewModel.getState(for: index)
+        }
         savedCitiesVC = vc
 
         // Add as child so we control the animation fully
         addChild(vc)
         vc.view.frame = window.bounds
         vc.view.transform = CGAffineTransform(translationX: 0, y: window.bounds.height)
-        view.addSubview(vc.view)
+        window.addSubview(vc.view)
         vc.didMove(toParent: self)
 
         UIView.animate(withDuration: 0.45,

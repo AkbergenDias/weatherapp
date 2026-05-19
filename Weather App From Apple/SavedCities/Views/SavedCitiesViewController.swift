@@ -20,6 +20,7 @@ class SavedCitiesViewController: UIViewController {
     let viewModel = SavedCitiesViewModel()
     private var searchResults: [MKLocalSearchCompletion] = []
     private var isSearching = false
+    var weatherStateProvider: ((Int) -> WeatherState?)?
     
     // MARK: - UI Components
     private let titleLabel: UILabel = {
@@ -73,7 +74,7 @@ class SavedCitiesViewController: UIViewController {
         view.addSubview(statusLabel)
         
         titleLabel.snp.makeConstraints { make in
-            make.top.equalToSuperview().inset(24)
+            make.top.equalTo(view.safeAreaLayoutGuide).offset(100)
             make.horizontalEdges.equalToSuperview().inset(16)
         }
         
@@ -100,7 +101,7 @@ class SavedCitiesViewController: UIViewController {
     
 }
 
-// MARK: - Биндинги состояний
+// MARK: - Bindings
 extension SavedCitiesViewController {
     private func setupBindings() {
         viewModel.onSavedCitiesUpdate = { [weak self] in
@@ -168,15 +169,12 @@ extension SavedCitiesViewController: UITableViewDataSource, UITableViewDelegate 
             return cell
         } else {
             guard let cell = tableView.dequeueReusableCell(withIdentifier: "CityWeatherCell", for: indexPath) as? CityWeatherCell else {
-                return UITableViewCell()
-            }
-            let cityName = viewModel.displayCities[indexPath.row]
-            cell.configure(cityName: cityName)
-            
-            if indexPath.row == 0 {
-                cell.showLocationIcon()
-            }
-            return cell
+                    return UITableViewCell()
+                }
+                let cityName = viewModel.displayCities[indexPath.row]
+                let state = weatherStateProvider?(indexPath.row)
+                cell.configure(cityName: cityName, weatherState: state, isCurrentLocation: indexPath.row == 0)
+                return cell
         }
     }
     
@@ -184,7 +182,7 @@ extension SavedCitiesViewController: UITableViewDataSource, UITableViewDelegate 
         return isSearching ? 50 : 110
     }
     
-    // MARK: - Свайп для удаления (Задание из ТЗ)
+    // MARK: - Delete
     func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
         guard !isSearching, indexPath.row != 0 else { return nil }
         
@@ -199,7 +197,8 @@ extension SavedCitiesViewController: UITableViewDataSource, UITableViewDelegate 
         return configuration
     }
     
-    // MARK: - Выбор города из поиска
+    // MARK: - City deselect
+// MARK: - City deselect
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         
@@ -207,11 +206,11 @@ extension SavedCitiesViewController: UITableViewDataSource, UITableViewDelegate 
             let selectedCompletion = searchResults[indexPath.row]
             
             viewModel.selectCompletion(selectedCompletion) { [weak self] coordinate, cityName in
-                guard let name = cityName else { return }
+                guard let self = self, let cityName = cityName else { return }
                 
-                self?.viewModel.saveNewCity(name)
+                self.viewModel.saveNewCity(cityName)
                 
-                DispatchQueue.main.async {
+                DispatchQueue.main.async { [weak self] in
                     self?.searchField.text = ""
                     self?.isSearching = false
                     self?.viewModel.loadSavedCities()

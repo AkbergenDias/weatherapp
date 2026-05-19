@@ -12,6 +12,7 @@ class WeatherViewController: UIViewController {
     
     private let viewModel: WeatherViewModel
     private let cityIndex: Int
+    private var hasAnimatedEntrance = false
     
     private let gradientLayer = GradientManager.getGradient(for: .current())
     private let mainView = WeatherMainView()
@@ -71,6 +72,10 @@ class WeatherViewController: UIViewController {
             guard let self else { return }
             DispatchQueue.main.async {
                 self.mainView.updateState(state)
+                if case .success = state, !self.hasAnimatedEntrance {
+                    self.hasAnimatedEntrance = true
+                    self.mainView.playEntranceAnimation()
+                }
                 switch state {
                 case .success, .error:
                     self.mainView.refreshControl.endRefreshing()
