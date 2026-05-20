@@ -26,6 +26,8 @@ class WeatherViewModel: LocationManagerDelegate {
     
     var onCitiesListRefreshed: (() -> Void)?
     var onActiveIndexChanged: ((Int) -> Void)?
+    var onAnyCityStateUpdated: (() -> Void)?
+
     
     private let apiKey = "6dc2788ca091c6b2364a1891d83f95f4"
     
@@ -37,6 +39,15 @@ class WeatherViewModel: LocationManagerDelegate {
         self.persistenceService = persistenceService
         self.locationManager.delegate = self
         loadCities()
+        
+        NotificationCenter.default.addObserver(self,
+                selector: #selector(unitChanged),
+                name: .temperatureUnitChanged,
+                object: nil)
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
     
     func start() {
@@ -63,6 +74,12 @@ class WeatherViewModel: LocationManagerDelegate {
             }
     }
     
+    @objc private func unitChanged() {
+        fetchAllNamedCities()
+        locationManager.requestLocation()
+    }
+
+    
     // MARK: - State helpers
     
     func getState(for index: Int) -> WeatherState? {
@@ -73,6 +90,9 @@ class WeatherViewModel: LocationManagerDelegate {
         weatherStates[index] = state
         DispatchQueue.main.async {
             self.stateCallbacks[index]?(state)
+            if case .success = state {
+                self.onAnyCityStateUpdated?()
+            }
         }
     }
 
@@ -364,6 +384,7 @@ class WeatherViewModel: LocationManagerDelegate {
     private static let temperatureFormatter: MeasurementFormatter = {
         let f = MeasurementFormatter()
         f.unitStyle = .short
+        f.unitOptions = .providedUnit
         f.numberFormatter.maximumFractionDigits = 0
         return f
     }()
@@ -377,13 +398,13 @@ class WeatherViewModel: LocationManagerDelegate {
 
     private func formatTemp(_ celsius: Double) -> String {
         let input = Measurement(value: celsius, unit: UnitTemperature.celsius)
-        let usesMetric = Locale.current.usesMetricSystem
-        let converted = usesMetric
-            ? input
-            : input.converted(to: .fahrenheit)
-        return Self.temperatureFormatter.string(from: converted)
+        let unit: UnitTemperature = SettingsService.shared.temperatureUnit == .celsius
+            ? .celsius
+            : .fahrenheit
+        return Self.temperatureFormatter.string(from: input.converted(to: unit))
     }
-
+    
+    // Нужно ли менять ветер на км/ч? 
     private func formatWind(_ metersPerSecond: Double) -> String {
         let input = Measurement(value: metersPerSecond, unit: UnitSpeed.metersPerSecond)
         let usesMetric = Locale.current.usesMetricSystem

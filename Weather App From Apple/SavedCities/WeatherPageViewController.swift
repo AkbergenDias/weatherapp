@@ -105,6 +105,11 @@ class WeatherPageViewController: UIPageViewController {
         vc.weatherStateProvider = { [weak self] index in
             self?.viewModel.getState(for: index)
         }
+        
+        viewModel.onAnyCityStateUpdated = { [weak vc] in
+            vc?.reloadCitiesTable()
+        }
+        
         savedCitiesVC = vc
 
         addChild(vc)
@@ -138,6 +143,7 @@ private func closeSavedCitiesList() {
             vc.view.removeFromSuperview()
             vc.removeFromParent()
             self.savedCitiesVC = nil
+            self.viewModel.onAnyCityStateUpdated = nil
         }
     }
 }

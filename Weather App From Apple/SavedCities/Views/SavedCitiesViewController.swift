@@ -54,6 +54,17 @@ class SavedCitiesViewController: UIViewController {
         return table
     }()
     
+    private lazy var moreButton: UIButton = {
+        let btn = UIButton(type: .system)
+        let config = UIImage.SymbolConfiguration(pointSize: 16, weight: .semibold)
+        btn.setImage(UIImage(systemName: "ellipsis", withConfiguration: config), for: .normal)
+        btn.tintColor = .white
+        btn.backgroundColor = UIColor.white.withAlphaComponent(0.2)
+        btn.layer.cornerRadius = 20
+        btn.addTarget(self, action: #selector(moreButtonTapped), for: .touchUpInside)
+        return btn
+    }()
+    
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -73,6 +84,13 @@ class SavedCitiesViewController: UIViewController {
         view.addSubview(searchField)
         view.addSubview(tableView)
         view.addSubview(statusLabel)
+        view.addSubview(moreButton)
+        
+        moreButton.snp.makeConstraints { make in
+            make.centerY.equalTo(titleLabel)
+            make.trailing.equalToSuperview().inset(16)
+            make.size.equalTo(40)
+        }
         
         titleLabel.snp.makeConstraints { make in
             make.top.equalTo(view.safeAreaLayoutGuide).offset(100)
@@ -96,8 +114,24 @@ class SavedCitiesViewController: UIViewController {
         }
     }
     
+    func reloadCitiesTable() {
+        tableView.reloadData()
+    }
+    
     @objc private func searchTextChanged() {
         viewModel.processSearchInput(searchField.text ?? "")
+    }
+    
+    @objc private func moreButtonTapped() {
+        HapticManager.selectionImpact()
+        let sheet = WeatherOptionsBottomSheetVC()
+        
+        if let presentation = sheet.sheetPresentationController {
+            presentation.detents = [.medium()]
+            presentation.prefersGrabberVisible = false
+            presentation.preferredCornerRadius = 20
+        }
+        present(sheet, animated: true)
     }
     
 }
@@ -200,7 +234,6 @@ extension SavedCitiesViewController: UITableViewDataSource, UITableViewDelegate 
     }
     
     // MARK: - City deselect
-// MARK: - City deselect
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         
