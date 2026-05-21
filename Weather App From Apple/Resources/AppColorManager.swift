@@ -21,6 +21,6 @@ enum AppTextStyle {
 }
 
 struct AppColorManager {
-    static let mainBackground = UIColor(named: "mainBackground")
-    static let primaryText = UIColor(named: "primaryText")
+    static let mainBackground = UIColor(named: "2B4F73")
+    static let primaryText = UIColor.white
 }
